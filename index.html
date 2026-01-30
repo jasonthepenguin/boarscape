@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Boarscape</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="app">
@@ -11,6 +14,27 @@
 
       <div id="hud">
         <div id="loading" class="panel">Loading…</div>
+
+        <!-- Game Title -->
+        <div id="game-title">BoarScape</div>
+
+        <!-- Bottom Bars -->
+        <div id="bars-container">
+          <div class="stat-bar" id="health-bar">
+            <div class="bar-icon">♥</div>
+            <div class="bar-track">
+              <div class="bar-fill health-fill" style="width: 100%"></div>
+              <div class="bar-text">100 / 100</div>
+            </div>
+          </div>
+          <div class="stat-bar" id="xp-bar">
+            <div class="bar-icon">★</div>
+            <div class="bar-track">
+              <div class="bar-fill xp-fill" style="width: 35%"></div>
+              <div class="bar-text">350 / 1000 XP</div>
+            </div>
+          </div>
+        </div>
 
         <div id="help" class="panel">
           <div class="title">Controls</div>
