@@ -4,6 +4,7 @@ import {
   ACESFilmicToneMapping,
   AnimationMixer,
   Box3,
+  CanvasTexture,
   Clock,
   Color,
   AmbientLight,
@@ -13,6 +14,8 @@ import {
   HemisphereLight,
   PerspectiveCamera,
   Scene,
+  Sprite,
+  SpriteMaterial,
   SRGBColorSpace,
   Vector3,
   WebGLRenderer,
@@ -89,6 +92,69 @@ scene.add(fill);
 const env = createEnvironment(scene);
 hideLoading();
 
+// Create nametag sprite
+function createNametag(name) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  
+  // Measure text to size canvas
+  const fontSize = 48;
+  const padding = 16;
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  const metrics = ctx.measureText(name);
+  const textWidth = metrics.width;
+  
+  canvas.width = textWidth + padding * 2;
+  canvas.height = fontSize + padding * 1.5;
+  
+  // Semi-transparent black background with rounded corners
+  ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+  const radius = 8;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(w - radius, 0);
+  ctx.quadraticCurveTo(w, 0, w, radius);
+  ctx.lineTo(w, h - radius);
+  ctx.quadraticCurveTo(w, h, w - radius, h);
+  ctx.lineTo(radius, h);
+  ctx.quadraticCurveTo(0, h, 0, h - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.fill();
+  
+  // White text with slight shadow
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1;
+  ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+  
+  const texture = new CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  
+  const material = new SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  
+  const sprite = new Sprite(material);
+  // Scale sprite to reasonable world size (width based on canvas aspect)
+  const spriteHeight = 0.5;
+  const aspect = canvas.width / canvas.height;
+  sprite.scale.set(spriteHeight * aspect, spriteHeight, 1);
+  
+  return sprite;
+}
+
 // Load player
 showLoading("Loading player…");
 
@@ -134,6 +200,13 @@ loader.load(
         }
       }
     });
+
+    // Add nametag above player
+    const nametag = createNametag("Childpredator32");
+    const playerBounds = new Box3().setFromObject(playerModel);
+    const playerHeight = playerBounds.max.y - playerBounds.min.y;
+    nametag.position.y = playerHeight + 0.4; // Above the head
+    playerRoot.add(nametag);
 
     // Add to scene at spawn
     playerRoot.position.x = 0;
