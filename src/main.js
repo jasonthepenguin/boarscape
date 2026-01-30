@@ -6,8 +6,10 @@ import {
   Box3,
   Clock,
   Color,
+  AmbientLight,
   DirectionalLight,
   Fog,
+  Group,
   HemisphereLight,
   PerspectiveCamera,
   Scene,
@@ -52,15 +54,21 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true;
 renderer.outputColorSpace = SRGBColorSpace;
 renderer.toneMapping = ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.22;
 
 // Lights
-const hemi = new HemisphereLight(0xbfe3ff, 0x264a1a, 0.9);
+const hemi = new HemisphereLight(0xbfe3ff, 0x264a1a, 1.15);
 scene.add(hemi);
+
+// Soft fill to lift shadows on the player
+const ambient = new AmbientLight(0xffffff, 0.28);
+scene.add(ambient);
 
 const sun = new DirectionalLight(0xffffff, 1.35);
 sun.position.set(40, 65, 35);
 sun.castShadow = true;
+sun.shadow.bias = -0.0002;
+sun.shadow.normalBias = 0.015;
 sun.shadow.mapSize.width = 2048;
 sun.shadow.mapSize.height = 2048;
 sun.shadow.camera.near = 1;
@@ -70,6 +78,12 @@ sun.shadow.camera.right = 90;
 sun.shadow.camera.top = 90;
 sun.shadow.camera.bottom = -90;
 scene.add(sun);
+
+// Gentle back-fill so the model isn't overly shadowy when facing away from the sun
+const fill = new DirectionalLight(0xffffff, 0.25);
+fill.position.set(-55, 28, -65);
+fill.castShadow = false;
+scene.add(fill);
 
 // Environment
 const env = createEnvironment(scene, { fieldSize: 560, treeCount: 320 });
@@ -83,29 +97,35 @@ const modelUrl = new URL("../mesh-1769779998.glb", import.meta.url);
 
 let controller = null;
 let mixer = null;
-let player = null;
+let playerRoot = null;
+let playerModel = null;
 
 loader.load(
   modelUrl.href,
   (gltf) => {
-    player = gltf.scene;
+    playerModel = gltf.scene;
 
     // Make it a reasonable size
-    const box0 = new Box3().setFromObject(player);
+    const box0 = new Box3().setFromObject(playerModel);
     const size0 = new Vector3();
     box0.getSize(size0);
     const height0 = Math.max(0.0001, size0.y);
     const desiredHeight = 2.1;
     const scale = desiredHeight / height0;
-    player.scale.setScalar(scale);
+    playerModel.scale.setScalar(scale);
+    playerModel.updateMatrixWorld(true);
 
-    // Ensure feet touch ground (player pivot at feet)
-    const box = new Box3().setFromObject(player);
+    // Create a root object we move/land with, and offset the model inside it so feet sit at y=0.
+    // This prevents the mesh from sinking when we clamp the root to ground.
+    const box = new Box3().setFromObject(playerModel);
     const minY = box.min.y;
-    player.position.y -= minY;
+    playerRoot = new Group();
+    playerRoot.add(playerModel);
+    playerModel.position.y -= minY;
+    playerRoot.updateMatrixWorld(true);
 
     // Shadows + ensure materials are lit
-    player.traverse((obj) => {
+    playerModel.traverse((obj) => {
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
@@ -116,26 +136,27 @@ loader.load(
     });
 
     // Add to scene at spawn
-    player.position.x = 0;
-    player.position.z = 0;
-    scene.add(player);
+    playerRoot.position.x = 0;
+    playerRoot.position.y = env.groundY ?? 0;
+    playerRoot.position.z = 0;
+    scene.add(playerRoot);
 
     // Animation (if present)
     if (gltf.animations && gltf.animations.length) {
-      mixer = new AnimationMixer(player);
+      mixer = new AnimationMixer(playerModel);
       const action = mixer.clipAction(gltf.animations[0]);
       action.play();
     }
 
     // Player collision radius + camera target height from bounds
     const sized = new Vector3();
-    new Box3().setFromObject(player).getSize(sized);
+    new Box3().setFromObject(playerRoot).getSize(sized);
     const playerRadius = Math.max(sized.x, sized.z) * 0.28;
     const targetHeight = Math.max(0.8, Math.min(1.6, sized.y * 0.55));
 
     controller = new ThirdPersonController({
       camera,
-      target: player,
+      target: playerRoot,
       domElement: canvas,
       environment: env,
       targetHeight,
