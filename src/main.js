@@ -40,7 +40,7 @@ showLoading("Loading world…");
 
 const scene = new Scene();
 scene.background = new Color("#87cfff");
-scene.fog = new Fog("#87cfff", 80, 520);
+scene.fog = new Fog("#87cfff", 40, 180);
 
 const camera = new PerspectiveCamera(60, 1, 0.1, 2000);
 camera.position.set(0, 6, 10);
@@ -61,7 +61,7 @@ const hemi = new HemisphereLight(0xbfe3ff, 0x264a1a, 1.15);
 scene.add(hemi);
 
 // Soft fill to lift shadows on the player
-const ambient = new AmbientLight(0xffffff, 0.28);
+const ambient = new AmbientLight(0xffffff, 0.75);
 scene.add(ambient);
 
 const sun = new DirectionalLight(0xffffff, 1.35);
@@ -86,7 +86,7 @@ fill.castShadow = false;
 scene.add(fill);
 
 // Environment
-const env = createEnvironment(scene, { fieldSize: 560, treeCount: 320 });
+const env = createEnvironment(scene);
 hideLoading();
 
 // Load player

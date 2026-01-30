@@ -4,6 +4,7 @@ import {
   Color,
   ConeGeometry,
   CylinderGeometry,
+  DodecahedronGeometry,
   Group,
   InstancedMesh,
   Matrix4,
@@ -12,6 +13,7 @@ import {
   PlaneGeometry,
   Quaternion,
   RepeatWrapping,
+  SphereGeometry,
   SRGBColorSpace,
   Sprite,
   SpriteMaterial,
@@ -102,7 +104,7 @@ function makeCloudTexture() {
   return texture;
 }
 
-export function createEnvironment(scene, { fieldSize = 520, treeCount = 260 } = {}) {
+export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = {}) {
   // Background
   scene.background = new Color("#87cfff");
 
@@ -138,67 +140,225 @@ export function createEnvironment(scene, { fieldSize = 520, treeCount = 260 } = 
   ground.position.y = 0;
   scene.add(ground);
 
-  // Trees (instanced for performance)
-  const trunkGeo = new CylinderGeometry(0.18, 0.26, 2.0, 8);
-  const leavesGeo = new ConeGeometry(1.15, 2.7, 8);
-  const trunkMat = new MeshStandardMaterial({ color: new Color("#7b4a2a"), roughness: 1 });
-  const leavesMat = new MeshStandardMaterial({ color: new Color("#2f8f3a"), roughness: 1 });
-
-  const trunks = new InstancedMesh(trunkGeo, trunkMat, treeCount);
-  const leaves = new InstancedMesh(leavesGeo, leavesMat, treeCount);
-  trunks.castShadow = true;
-  trunks.receiveShadow = true;
-  leaves.castShadow = true;
-
+  // Trees - multiple types for variety
+  const half = fieldSize / 2;
+  const spawnAvoidRadius = 16;
   const treeColliders = [];
+  const forest = new Group();
+
+  // Helper for random color variation
+  const varyColor = (baseHex, hueVar = 0.05, satVar = 0.15, lightVar = 0.1) => {
+    const color = new Color(baseHex);
+    const hsl = { h: 0, s: 0, l: 0 };
+    color.getHSL(hsl);
+    hsl.h += (Math.random() - 0.5) * hueVar;
+    hsl.s = Math.max(0, Math.min(1, hsl.s + (Math.random() - 0.5) * satVar));
+    hsl.l = Math.max(0, Math.min(1, hsl.l + (Math.random() - 0.5) * lightVar));
+    return new Color().setHSL(hsl.h, hsl.s, hsl.l);
+  };
+
+  // Trunk colors (browns, grays)
+  const trunkColors = ["#5c3d2e", "#7b4a2a", "#6b5344", "#4a3728", "#8b6914"];
+  // Leaf colors (greens, some autumn touches)
+  const leafColors = ["#2f8f3a", "#1e6b2e", "#4a9f4a", "#3d7a3d", "#5aaf5a", "#2d5a1e", "#6b8e23"];
+
   const tmpMatrix = new Matrix4();
   const tmpPos = new Vector3();
   const tmpQuat = new Quaternion();
   const tmpScale = new Vector3();
   const yAxis = new Vector3(0, 1, 0);
 
-  const half = fieldSize / 2;
-  const spawnAvoidRadius = 16;
+  // ===== TREE TYPE 1: Layered Pine Trees =====
+  const pineCount = Math.floor(treeCount * 0.4);
+  const pineTrunkGeo = new CylinderGeometry(0.12, 0.22, 1.0, 6);
+  const pineLayerGeo = new ConeGeometry(1.0, 1.4, 7);
+  
+  const pineTrunkMat = new MeshStandardMaterial({ color: "#ffffff", roughness: 1 });
+  const pineLeavesMat = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.9 });
 
-  for (let i = 0; i < treeCount; i++) {
-    let x = 0;
-    let z = 0;
-    // Keep spawn area clear
+  // 3 layers per pine tree
+  const pineTrunks = new InstancedMesh(pineTrunkGeo, pineTrunkMat, pineCount);
+  const pineLayer1 = new InstancedMesh(pineLayerGeo, pineLeavesMat, pineCount);
+  const pineLayer2 = new InstancedMesh(pineLayerGeo, pineLeavesMat, pineCount);
+  const pineLayer3 = new InstancedMesh(pineLayerGeo, pineLeavesMat, pineCount);
+
+  pineTrunks.castShadow = true;
+  pineTrunks.receiveShadow = true;
+  pineLayer1.castShadow = true;
+  pineLayer2.castShadow = true;
+  pineLayer3.castShadow = true;
+
+  for (let i = 0; i < pineCount; i++) {
+    let x = 0, z = 0;
     for (let tries = 0; tries < 50; tries++) {
       x = (Math.random() * 2 - 1) * (half - 6);
       z = (Math.random() * 2 - 1) * (half - 6);
       if (x * x + z * z > spawnAvoidRadius * spawnAvoidRadius) break;
     }
 
-    const h = 1 + Math.random() * 1.2;
-    const s = 0.9 + Math.random() * 0.6;
+    const scale = 0.7 + Math.random() * 0.8;
+    const height = 3.5 + Math.random() * 2.5;
     const rotY = Math.random() * Math.PI * 2;
     tmpQuat.setFromAxisAngle(yAxis, rotY);
 
-    // Trunk matrix
-    tmpPos.set(x, (2.0 * h) / 2, z);
-    tmpScale.set(s, h, s);
+    // Trunk
+    tmpPos.set(x, height * 0.15, z);
+    tmpScale.set(scale, height * 0.3, scale);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
-    trunks.setMatrixAt(i, tmpMatrix);
+    pineTrunks.setMatrixAt(i, tmpMatrix);
+    pineTrunks.setColorAt(i, varyColor(trunkColors[i % trunkColors.length], 0.02, 0.1, 0.15));
 
-    // Leaves matrix
-    tmpPos.set(x, 2.0 * h + (2.7 * s) / 2 - 0.2, z);
-    tmpScale.set(1.0 * s, 1.0 * s, 1.0 * s);
+    // Layer colors with slight variation per tree
+    const layerColor = varyColor(leafColors[i % leafColors.length], 0.08, 0.2, 0.12);
+
+    // Bottom layer (largest)
+    tmpPos.set(x, height * 0.35, z);
+    tmpScale.set(scale * 1.3, scale * 1.1, scale * 1.3);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
-    leaves.setMatrixAt(i, tmpMatrix);
+    pineLayer1.setMatrixAt(i, tmpMatrix);
+    pineLayer1.setColorAt(i, layerColor.clone().offsetHSL(0, 0, -0.05));
 
-    treeColliders.push({
-      position: new Vector3(x, 0, z),
-      radius: 1.15 * s,
-    });
+    // Middle layer
+    tmpPos.set(x, height * 0.55, z);
+    tmpScale.set(scale * 1.0, scale * 1.0, scale * 1.0);
+    tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+    pineLayer2.setMatrixAt(i, tmpMatrix);
+    pineLayer2.setColorAt(i, layerColor);
+
+    // Top layer (smallest)
+    tmpPos.set(x, height * 0.75, z);
+    tmpScale.set(scale * 0.7, scale * 0.9, scale * 0.7);
+    tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+    pineLayer3.setMatrixAt(i, tmpMatrix);
+    pineLayer3.setColorAt(i, layerColor.clone().offsetHSL(0, 0, 0.05));
+
+    treeColliders.push({ position: new Vector3(x, 0, z), radius: scale * 0.8 });
   }
 
-  trunks.instanceMatrix.needsUpdate = true;
-  leaves.instanceMatrix.needsUpdate = true;
+  pineTrunks.instanceMatrix.needsUpdate = true;
+  pineTrunks.instanceColor.needsUpdate = true;
+  pineLayer1.instanceMatrix.needsUpdate = true;
+  pineLayer1.instanceColor.needsUpdate = true;
+  pineLayer2.instanceMatrix.needsUpdate = true;
+  pineLayer2.instanceColor.needsUpdate = true;
+  pineLayer3.instanceMatrix.needsUpdate = true;
+  pineLayer3.instanceColor.needsUpdate = true;
 
-  const forest = new Group();
-  forest.add(trunks);
-  forest.add(leaves);
+  forest.add(pineTrunks, pineLayer1, pineLayer2, pineLayer3);
+
+  // ===== TREE TYPE 2: Round Deciduous Trees =====
+  const roundCount = Math.floor(treeCount * 0.35);
+  const roundTrunkGeo = new CylinderGeometry(0.15, 0.28, 1.0, 8);
+  const roundCanopyGeo = new DodecahedronGeometry(1.0, 1); // Low-poly sphere-ish
+
+  const roundTrunkMat = new MeshStandardMaterial({ color: "#ffffff", roughness: 1 });
+  const roundLeavesMat = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.85 });
+
+  const roundTrunks = new InstancedMesh(roundTrunkGeo, roundTrunkMat, roundCount);
+  const roundCanopies = new InstancedMesh(roundCanopyGeo, roundLeavesMat, roundCount);
+
+  roundTrunks.castShadow = true;
+  roundTrunks.receiveShadow = true;
+  roundCanopies.castShadow = true;
+
+  for (let i = 0; i < roundCount; i++) {
+    let x = 0, z = 0;
+    for (let tries = 0; tries < 50; tries++) {
+      x = (Math.random() * 2 - 1) * (half - 6);
+      z = (Math.random() * 2 - 1) * (half - 6);
+      if (x * x + z * z > spawnAvoidRadius * spawnAvoidRadius) break;
+    }
+
+    const scale = 0.8 + Math.random() * 0.7;
+    const trunkHeight = 1.8 + Math.random() * 1.5;
+    const rotY = Math.random() * Math.PI * 2;
+    tmpQuat.setFromAxisAngle(yAxis, rotY);
+
+    // Trunk
+    tmpPos.set(x, trunkHeight * 0.5, z);
+    tmpScale.set(scale * 0.8, trunkHeight, scale * 0.8);
+    tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+    roundTrunks.setMatrixAt(i, tmpMatrix);
+    roundTrunks.setColorAt(i, varyColor(trunkColors[(i + 2) % trunkColors.length], 0.02, 0.1, 0.15));
+
+    // Canopy (squashed sphere)
+    const canopyScale = scale * (1.3 + Math.random() * 0.5);
+    tmpPos.set(x, trunkHeight + canopyScale * 0.6, z);
+    tmpScale.set(canopyScale, canopyScale * (0.7 + Math.random() * 0.3), canopyScale);
+    tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+    roundCanopies.setMatrixAt(i, tmpMatrix);
+    roundCanopies.setColorAt(i, varyColor(leafColors[(i + 3) % leafColors.length], 0.1, 0.25, 0.15));
+
+    treeColliders.push({ position: new Vector3(x, 0, z), radius: canopyScale * 0.7 });
+  }
+
+  roundTrunks.instanceMatrix.needsUpdate = true;
+  roundTrunks.instanceColor.needsUpdate = true;
+  roundCanopies.instanceMatrix.needsUpdate = true;
+  roundCanopies.instanceColor.needsUpdate = true;
+
+  forest.add(roundTrunks, roundCanopies);
+
+  // ===== TREE TYPE 3: Tall Slim Birch-like Trees =====
+  const slimCount = Math.floor(treeCount * 0.25);
+  const slimTrunkGeo = new CylinderGeometry(0.08, 0.14, 1.0, 6);
+  const slimCanopyGeo = new SphereGeometry(1.0, 6, 5);
+
+  const slimTrunkMat = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.9 });
+  const slimLeavesMat = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.8 });
+
+  const slimTrunks = new InstancedMesh(slimTrunkGeo, slimTrunkMat, slimCount);
+  const slimCanopies = new InstancedMesh(slimCanopyGeo, slimLeavesMat, slimCount);
+
+  slimTrunks.castShadow = true;
+  slimTrunks.receiveShadow = true;
+  slimCanopies.castShadow = true;
+
+  // Lighter trunk colors for birch-like trees
+  const lightTrunkColors = ["#d4c8b8", "#e8dcc8", "#c9b99a", "#bfb5a0"];
+
+  for (let i = 0; i < slimCount; i++) {
+    let x = 0, z = 0;
+    for (let tries = 0; tries < 50; tries++) {
+      x = (Math.random() * 2 - 1) * (half - 6);
+      z = (Math.random() * 2 - 1) * (half - 6);
+      if (x * x + z * z > spawnAvoidRadius * spawnAvoidRadius) break;
+    }
+
+    const scale = 0.6 + Math.random() * 0.5;
+    const trunkHeight = 3.5 + Math.random() * 2.0;
+    const rotY = Math.random() * Math.PI * 2;
+    tmpQuat.setFromAxisAngle(yAxis, rotY);
+
+    // Tall slim trunk
+    tmpPos.set(x, trunkHeight * 0.5, z);
+    tmpScale.set(scale * 0.6, trunkHeight, scale * 0.6);
+    tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+    slimTrunks.setMatrixAt(i, tmpMatrix);
+    slimTrunks.setColorAt(i, varyColor(lightTrunkColors[i % lightTrunkColors.length], 0.02, 0.08, 0.1));
+
+    // Smaller, elongated canopy
+    const canopyWidth = scale * (0.8 + Math.random() * 0.4);
+    const canopyHeight = scale * (1.2 + Math.random() * 0.6);
+    tmpPos.set(x, trunkHeight + canopyHeight * 0.4, z);
+    tmpScale.set(canopyWidth, canopyHeight, canopyWidth);
+    tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+    slimCanopies.setMatrixAt(i, tmpMatrix);
+    
+    // Lighter, more yellow-green for birch leaves
+    const birchLeafColors = ["#8bc34a", "#9ccc65", "#7cb342", "#aed581"];
+    slimCanopies.setColorAt(i, varyColor(birchLeafColors[i % birchLeafColors.length], 0.08, 0.2, 0.12));
+
+    treeColliders.push({ position: new Vector3(x, 0, z), radius: canopyWidth * 0.6 });
+  }
+
+  slimTrunks.instanceMatrix.needsUpdate = true;
+  slimTrunks.instanceColor.needsUpdate = true;
+  slimCanopies.instanceMatrix.needsUpdate = true;
+  slimCanopies.instanceColor.needsUpdate = true;
+
+  forest.add(slimTrunks, slimCanopies);
+
   scene.add(forest);
 
   // Clouds
