@@ -2,6 +2,7 @@ import {
   AnimationMixer,
   Box3,
   CanvasTexture,
+  Color,
   Group,
   LoopOnce,
   LoopRepeat,
@@ -92,6 +93,124 @@ function setupPlayerMaterials(model) {
         });
       }
     }
+  });
+}
+
+/**
+ * Loads an NPC boar with a nametag and looping animation (no controller)
+ */
+export function loadNPC(scene, options = {}) {
+  const {
+    modelUrl,
+    name = "NPC",
+    desiredHeight = 2.1,
+    position = { x: 0, y: 0, z: 0 },
+    rotation = 0,
+    animation = null,
+    tint = null,
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        const npcModel = gltf.scene;
+
+        // Scale to desired height
+        const box0 = new Box3().setFromObject(npcModel);
+        const size0 = new Vector3();
+        box0.getSize(size0);
+        const height0 = Math.max(0.0001, size0.y);
+        const scale = desiredHeight / height0;
+        npcModel.scale.setScalar(scale);
+        npcModel.updateMatrixWorld(true);
+
+        // Create root group with model offset so feet sit at y=0
+        const box = new Box3().setFromObject(npcModel);
+        const minY = box.min.y;
+        const npcRoot = new Group();
+        npcRoot.add(npcModel);
+        npcModel.position.y -= minY;
+        npcRoot.updateMatrixWorld(true);
+
+        // Setup materials (unlit for visibility) with optional tint
+        const tintColor = tint ? new Color(tint) : null;
+        npcModel.traverse((obj) => {
+          if (obj.isMesh) {
+            obj.castShadow = true;
+            obj.receiveShadow = false;
+            if (obj.material) {
+              const baseColor = obj.material.color
+                ? obj.material.color.clone()
+                : new Color(0xffffff);
+              if (tintColor) {
+                baseColor.multiply(tintColor);
+              }
+              obj.material = new MeshBasicMaterial({
+                map: obj.material.map,
+                color: baseColor,
+              });
+            }
+          }
+        });
+
+        // Add nametag above NPC
+        const nametag = createNametag(name);
+        const npcBounds = new Box3().setFromObject(npcModel);
+        const npcHeight = npcBounds.max.y - npcBounds.min.y;
+        nametag.position.y = npcHeight + 0.4;
+        npcRoot.add(nametag);
+
+        // Position and rotate NPC
+        npcRoot.position.set(position.x, position.y, position.z);
+        const baseRotation = rotation;
+        npcRoot.rotation.y = rotation;
+        scene.add(npcRoot);
+
+        // Oscillation state for looking movement
+        let oscillationTime = Math.random() * Math.PI * 2; // Random starting phase
+        const oscillationSpeed = 1.2 + Math.random() * 0.4; // Slightly varied speed
+        const oscillationAmount = 0.35; // How far left/right to look
+
+        // Setup animation mixer
+        let mixer = null;
+        const actions = {};
+
+        if (gltf.animations && gltf.animations.length) {
+          mixer = new AnimationMixer(npcModel);
+
+          for (const clip of gltf.animations) {
+            const action = mixer.clipAction(clip);
+            actions[clip.name] = action;
+          }
+
+          // Start looping animation if specified
+          if (animation && actions[animation]) {
+            const action = actions[animation];
+            action.setLoop(LoopRepeat, Infinity);
+            action.play();
+          }
+        }
+
+        // Update function for oscillating look movement
+        const update = (dt) => {
+          oscillationTime += dt * oscillationSpeed;
+          npcRoot.rotation.y = baseRotation + Math.sin(oscillationTime) * oscillationAmount;
+        };
+
+        resolve({
+          root: npcRoot,
+          model: npcModel,
+          mixer,
+          actions,
+          update,
+        });
+      },
+      undefined,
+      (err) => reject(err)
+    );
   });
 }
 

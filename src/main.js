@@ -15,7 +15,7 @@ import {
 } from "three";
 
 import { createEnvironment } from "./game/environment.js";
-import { loadPlayer } from "./game/player.js";
+import { loadPlayer, loadNPC } from "./game/player.js";
 
 // =============================================================================
 // DOM Elements
@@ -124,6 +124,31 @@ loadPlayer(scene, camera, canvas, env, {
   });
 
 // =============================================================================
+// NPCs
+// =============================================================================
+
+const npcs = [];
+
+const npcConfigs = [
+  { name: "BoarMaxxing", position: { x: 5, y: 0, z: -3 }, rotation: -0.5, tint: "#ffccaa" },
+  { name: "NikitaBoaring", position: { x: -4, y: 0, z: -5 }, rotation: 0.8, tint: "#aaddff" },
+  { name: "Grok4", position: { x: 3, y: 0, z: 6 }, rotation: Math.PI, tint: "#ddffaa" },
+];
+
+for (const config of npcConfigs) {
+  loadNPC(scene, {
+    modelUrl: modelUrl.href,
+    name: config.name,
+    position: config.position,
+    rotation: config.rotation,
+    animation: "jump",
+    tint: config.tint,
+  }).then((npc) => {
+    npcs.push(npc);
+  });
+}
+
+// =============================================================================
 // Resize Handler
 // =============================================================================
 
@@ -150,6 +175,12 @@ function tick() {
   env.update(dt);
   if (player?.controller) player.controller.update(dt);
   if (player?.mixer) player.mixer.update(dt);
+
+  // Update NPCs (animations + looking movement)
+  for (const npc of npcs) {
+    if (npc.mixer) npc.mixer.update(dt);
+    if (npc.update) npc.update(dt);
+  }
 
   renderer.render(scene, camera);
 }
