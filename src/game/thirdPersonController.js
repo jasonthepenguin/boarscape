@@ -17,11 +17,13 @@ export class ThirdPersonController {
     environment,
     targetHeight = 1.25,
     playerRadius = 0.55,
+    onJump = null,
   }) {
     this.camera = camera;
     this.target = target;
     this.domElement = domElement;
     this.environment = environment;
+    this.onJump = onJump;
 
     // Player params
     this.targetHeight = targetHeight;
@@ -198,6 +200,7 @@ export class ThirdPersonController {
     if (this.onGround && this._jumpRequested) {
       this.velocity.y = this.jumpSpeed;
       this.onGround = false;
+      if (this.onJump) this.onJump();
     }
     this._jumpRequested = false;
 

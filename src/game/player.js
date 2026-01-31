@@ -3,6 +3,7 @@ import {
   Box3,
   CanvasTexture,
   Group,
+  LoopOnce,
   MeshBasicMaterial,
   Sprite,
   SpriteMaterial,
@@ -143,13 +144,46 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
         playerRoot.position.set(0, environment.groundY ?? 0, 0);
         scene.add(playerRoot);
 
-        // Setup animation mixer if model has animations
+        // Setup animation mixer and store actions by name
         let mixer = null;
+        const actions = {};
+
         if (gltf.animations && gltf.animations.length) {
           mixer = new AnimationMixer(playerModel);
-          const action = mixer.clipAction(gltf.animations[0]);
-          action.play();
+
+          // Create actions for each animation clip
+          for (const clip of gltf.animations) {
+            const action = mixer.clipAction(clip);
+            actions[clip.name] = action;
+            console.log(`Found animation: "${clip.name}"`);
+          }
         }
+
+        // Animation helper to play a one-shot animation (like jump)
+        const playAnimation = (name, { loop = false, onFinish = null } = {}) => {
+          const action = actions[name];
+          if (!action) {
+            console.warn(`Animation "${name}" not found`);
+            return;
+          }
+
+          action.reset();
+          if (!loop) {
+            action.setLoop(LoopOnce, 1);
+            action.clampWhenFinished = true;
+          }
+          action.play();
+
+          if (onFinish && !loop) {
+            const onComplete = (e) => {
+              if (e.action === action) {
+                mixer.removeEventListener("finished", onComplete);
+                onFinish();
+              }
+            };
+            mixer.addEventListener("finished", onComplete);
+          }
+        };
 
         // Calculate collision radius and camera target height
         const sized = new Vector3();
@@ -157,7 +191,7 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
         const playerRadius = Math.max(sized.x, sized.z) * 0.28;
         const targetHeight = Math.max(0.8, Math.min(1.6, sized.y * 0.55));
 
-        // Create controller
+        // Create controller with jump callback
         const controller = new ThirdPersonController({
           camera,
           target: playerRoot,
@@ -165,6 +199,7 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
           environment,
           targetHeight,
           playerRadius,
+          onJump: () => playAnimation("jump"),
         });
 
         resolve({
@@ -172,6 +207,8 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
           model: playerModel,
           mixer,
           controller,
+          actions,
+          playAnimation,
         });
       },
       (ev) => {
