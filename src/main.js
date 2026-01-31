@@ -133,7 +133,7 @@ npcs.push(kidNpc);
 
 loadPlayer(scene, camera, canvas, env, {
   modelUrl: modelUrl.href,
-  playerName: "Childpredator32",
+  playerName: "product_predator",
   onProgress: (pct) => showLoading(`Loading player... ${pct}%`),
 })
   .then((result) => {
