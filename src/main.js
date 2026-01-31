@@ -2,29 +2,24 @@ import "./style.css";
 
 import {
   ACESFilmicToneMapping,
-  AnimationMixer,
-  Box3,
-  CanvasTexture,
+  AmbientLight,
   Clock,
   Color,
-  AmbientLight,
   DirectionalLight,
   Fog,
-  Group,
   HemisphereLight,
-  MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
-  Sprite,
-  SpriteMaterial,
   SRGBColorSpace,
-  Vector3,
   WebGLRenderer,
 } from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { createEnvironment } from "./game/environment.js";
-import { ThirdPersonController } from "./game/thirdPersonController.js";
+import { loadPlayer } from "./game/player.js";
+
+// =============================================================================
+// DOM Elements
+// =============================================================================
 
 const canvas = document.querySelector("#game");
 const loadingEl = document.querySelector("#loading");
@@ -40,7 +35,9 @@ function hideLoading() {
   loadingEl.style.display = "none";
 }
 
-showLoading("Loading world…");
+// =============================================================================
+// Scene Setup
+// =============================================================================
 
 const scene = new Scene();
 scene.background = new Color("#87cfff");
@@ -60,14 +57,19 @@ renderer.outputColorSpace = SRGBColorSpace;
 renderer.toneMapping = ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.22;
 
-// Lights
+// =============================================================================
+// Lighting
+// =============================================================================
+
+// Sky/ground ambient
 const hemi = new HemisphereLight(0xbfe3ff, 0x264a1a, 1.15);
 scene.add(hemi);
 
-// Soft fill to lift shadows on the player
+// Soft fill to lift shadows
 const ambient = new AmbientLight(0xffffff, 0.75);
 scene.add(ambient);
 
+// Main sun light with shadows
 const sun = new DirectionalLight(0xffffff, 1.35);
 sun.position.set(40, 65, 35);
 sun.castShadow = true;
@@ -83,175 +85,47 @@ sun.shadow.camera.top = 90;
 sun.shadow.camera.bottom = -90;
 scene.add(sun);
 
-// Gentle back-fill so the model isn't overly shadowy when facing away from the sun
+// Gentle back-fill for when facing away from sun
 const fill = new DirectionalLight(0xffffff, 0.25);
 fill.position.set(-55, 28, -65);
 fill.castShadow = false;
 scene.add(fill);
 
+// =============================================================================
 // Environment
+// =============================================================================
+
+showLoading("Loading world...");
 const env = createEnvironment(scene);
 hideLoading();
 
-// Create nametag sprite
-function createNametag(name) {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  
-  // Measure text to size canvas
-  const fontSize = 48;
-  const padding = 16;
-  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-  const metrics = ctx.measureText(name);
-  const textWidth = metrics.width;
-  
-  canvas.width = textWidth + padding * 2;
-  canvas.height = fontSize + padding * 1.5;
-  
-  // Semi-transparent black background with rounded corners
-  ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
-  const radius = 8;
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.beginPath();
-  ctx.moveTo(radius, 0);
-  ctx.lineTo(w - radius, 0);
-  ctx.quadraticCurveTo(w, 0, w, radius);
-  ctx.lineTo(w, h - radius);
-  ctx.quadraticCurveTo(w, h, w - radius, h);
-  ctx.lineTo(radius, h);
-  ctx.quadraticCurveTo(0, h, 0, h - radius);
-  ctx.lineTo(0, radius);
-  ctx.quadraticCurveTo(0, 0, radius, 0);
-  ctx.closePath();
-  ctx.fill();
-  
-  // White text with slight shadow
-  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-  ctx.shadowBlur = 4;
-  ctx.shadowOffsetX = 1;
-  ctx.shadowOffsetY = 1;
-  ctx.fillText(name, canvas.width / 2, canvas.height / 2);
-  
-  const texture = new CanvasTexture(canvas);
-  texture.needsUpdate = true;
-  
-  const material = new SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-  });
-  
-  const sprite = new Sprite(material);
-  // Scale sprite to reasonable world size (width based on canvas aspect)
-  const spriteHeight = 0.5;
-  const aspect = canvas.width / canvas.height;
-  sprite.scale.set(spriteHeight * aspect, spriteHeight, 1);
-  
-  return sprite;
-}
+// =============================================================================
+// Player
+// =============================================================================
 
-// Load player
-showLoading("Loading player…");
+let player = null;
 
-const loader = new GLTFLoader();
+showLoading("Loading player...");
+
 const modelUrl = new URL("../mesh-1769779998.glb", import.meta.url);
 
-let controller = null;
-let mixer = null;
-let playerRoot = null;
-let playerModel = null;
-
-loader.load(
-  modelUrl.href,
-  (gltf) => {
-    playerModel = gltf.scene;
-
-    // Make it a reasonable size
-    const box0 = new Box3().setFromObject(playerModel);
-    const size0 = new Vector3();
-    box0.getSize(size0);
-    const height0 = Math.max(0.0001, size0.y);
-    const desiredHeight = 2.1;
-    const scale = desiredHeight / height0;
-    playerModel.scale.setScalar(scale);
-    playerModel.updateMatrixWorld(true);
-
-    // Create a root object we move/land with, and offset the model inside it so feet sit at y=0.
-    // This prevents the mesh from sinking when we clamp the root to ground.
-    const box = new Box3().setFromObject(playerModel);
-    const minY = box.min.y;
-    playerRoot = new Group();
-    playerRoot.add(playerModel);
-    playerModel.position.y -= minY;
-    playerRoot.updateMatrixWorld(true);
-
-    // Make player fully lit (ignore scene lighting)
-    playerModel.traverse((obj) => {
-      if (obj.isMesh) {
-        obj.castShadow = true;
-        obj.receiveShadow = false;
-        if (obj.material) {
-          obj.material = new MeshBasicMaterial({
-            map: obj.material.map,
-            color: obj.material.color,
-          });
-        }
-      }
-    });
-
-    // Add nametag above player
-    const nametag = createNametag("Childpredator32");
-    const playerBounds = new Box3().setFromObject(playerModel);
-    const playerHeight = playerBounds.max.y - playerBounds.min.y;
-    nametag.position.y = playerHeight + 0.4; // Above the head
-    playerRoot.add(nametag);
-
-    // Add to scene at spawn
-    playerRoot.position.x = 0;
-    playerRoot.position.y = env.groundY ?? 0;
-    playerRoot.position.z = 0;
-    scene.add(playerRoot);
-
-    // Animation (if present)
-    if (gltf.animations && gltf.animations.length) {
-      mixer = new AnimationMixer(playerModel);
-      const action = mixer.clipAction(gltf.animations[0]);
-      action.play();
-    }
-
-    // Player collision radius + camera target height from bounds
-    const sized = new Vector3();
-    new Box3().setFromObject(playerRoot).getSize(sized);
-    const playerRadius = Math.max(sized.x, sized.z) * 0.28;
-    const targetHeight = Math.max(0.8, Math.min(1.6, sized.y * 0.55));
-
-    controller = new ThirdPersonController({
-      camera,
-      target: playerRoot,
-      domElement: canvas,
-      environment: env,
-      targetHeight,
-      playerRadius,
-    });
-
+loadPlayer(scene, camera, canvas, env, {
+  modelUrl: modelUrl.href,
+  playerName: "Childpredator32",
+  onProgress: (pct) => showLoading(`Loading player... ${pct}%`),
+})
+  .then((result) => {
+    player = result;
     hideLoading();
-  },
-  (ev) => {
-    if (!ev.total) return;
-    const pct = Math.round((ev.loaded / ev.total) * 100);
-    showLoading(`Loading player… ${pct}%`);
-  },
-  (err) => {
+  })
+  .catch((err) => {
     console.error(err);
     showLoading("Failed to load player model. Check console.");
-  },
-);
+  });
+
+// =============================================================================
+// Resize Handler
+// =============================================================================
 
 function resize() {
   const w = window.innerWidth;
@@ -263,6 +137,10 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
+// =============================================================================
+// Game Loop
+// =============================================================================
+
 const clock = new Clock();
 
 function tick() {
@@ -270,10 +148,10 @@ function tick() {
   const dt = Math.min(0.05, clock.getDelta());
 
   env.update(dt);
-  if (controller) controller.update(dt);
-  if (mixer) mixer.update(dt);
+  if (player?.controller) player.controller.update(dt);
+  if (player?.mixer) player.mixer.update(dt);
 
   renderer.render(scene, camera);
 }
-tick();
 
+tick();
