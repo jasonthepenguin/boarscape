@@ -109,6 +109,19 @@ showLoading("Loading player...");
 
 const modelUrl = new URL("../boar3.glb", import.meta.url);
 
+// =============================================================================
+// NPCs
+// =============================================================================
+
+const npcs = [];
+
+// Wedge formation offsets (behind player)
+const npcConfigs = [
+  { name: "BoarMaxxing", tint: "#ffccaa", formationOffset: { x: -2.5, z: -4 } },
+  { name: "NikitaBoaring", tint: "#aaddff", formationOffset: { x: 2.5, z: -4 } },
+  { name: "Grok4", tint: "#ddffaa", formationOffset: { x: 0, z: -6 } },
+];
+
 loadPlayer(scene, camera, canvas, env, {
   modelUrl: modelUrl.href,
   playerName: "Childpredator32",
@@ -117,36 +130,27 @@ loadPlayer(scene, camera, canvas, env, {
   .then((result) => {
     player = result;
     hideLoading();
+
+    // Spawn NPCs that follow the player in wedge formation
+    for (const config of npcConfigs) {
+      loadNPC(scene, {
+        modelUrl: modelUrl.href,
+        name: config.name,
+        position: { x: 0, y: 0, z: 0 },
+        animation: "jump",
+        tint: config.tint,
+        followTarget: player.root,
+        formationOffset: config.formationOffset,
+        followSpeed: 6,
+      }).then((npc) => {
+        npcs.push(npc);
+      });
+    }
   })
   .catch((err) => {
     console.error(err);
     showLoading("Failed to load player model. Check console.");
   });
-
-// =============================================================================
-// NPCs
-// =============================================================================
-
-const npcs = [];
-
-const npcConfigs = [
-  { name: "BoarMaxxing", position: { x: 5, y: 0, z: -3 }, rotation: -0.5, tint: "#ffccaa" },
-  { name: "NikitaBoaring", position: { x: -4, y: 0, z: -5 }, rotation: 0.8, tint: "#aaddff" },
-  { name: "Grok4", position: { x: 3, y: 0, z: 6 }, rotation: Math.PI, tint: "#ddffaa" },
-];
-
-for (const config of npcConfigs) {
-  loadNPC(scene, {
-    modelUrl: modelUrl.href,
-    name: config.name,
-    position: config.position,
-    rotation: config.rotation,
-    animation: "jump",
-    tint: config.tint,
-  }).then((npc) => {
-    npcs.push(npc);
-  });
-}
 
 // =============================================================================
 // Resize Handler

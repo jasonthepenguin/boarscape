@@ -105,9 +105,11 @@ export function loadNPC(scene, options = {}) {
     name = "NPC",
     desiredHeight = 2.1,
     position = { x: 0, y: 0, z: 0 },
-    rotation = 0,
     animation = null,
     tint = null,
+    followTarget = null,
+    formationOffset = { x: 0, z: -3 },
+    followSpeed = 5,
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -163,16 +165,17 @@ export function loadNPC(scene, options = {}) {
         nametag.position.y = npcHeight + 0.4;
         npcRoot.add(nametag);
 
-        // Position and rotate NPC
+        // Position NPC
         npcRoot.position.set(position.x, position.y, position.z);
-        const baseRotation = rotation;
-        npcRoot.rotation.y = rotation;
         scene.add(npcRoot);
 
         // Oscillation state for looking movement
         let oscillationTime = Math.random() * Math.PI * 2; // Random starting phase
         const oscillationSpeed = 1.2 + Math.random() * 0.4; // Slightly varied speed
         const oscillationAmount = 0.35; // How far left/right to look
+
+        // For tracking facing direction
+        let currentRotation = 0;
 
         // Setup animation mixer
         let mixer = null;
@@ -194,10 +197,47 @@ export function loadNPC(scene, options = {}) {
           }
         }
 
-        // Update function for oscillating look movement
+        // Update function for following and oscillating look movement
         const update = (dt) => {
           oscillationTime += dt * oscillationSpeed;
-          npcRoot.rotation.y = baseRotation + Math.sin(oscillationTime) * oscillationAmount;
+
+          if (followTarget) {
+            // Calculate target position in wedge formation behind player
+            const playerRotation = followTarget.rotation.y;
+            const cosR = Math.cos(playerRotation);
+            const sinR = Math.sin(playerRotation);
+
+            // Transform formation offset by player's rotation (offset is behind player)
+            const targetX =
+              followTarget.position.x +
+              formationOffset.x * cosR -
+              formationOffset.z * sinR;
+            const targetZ =
+              followTarget.position.z +
+              formationOffset.x * sinR +
+              formationOffset.z * cosR;
+
+            // Smoothly move towards target
+            const dx = targetX - npcRoot.position.x;
+            const dz = targetZ - npcRoot.position.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+
+            if (dist > 0.1) {
+              const moveAmount = Math.min(followSpeed * dt, dist);
+              npcRoot.position.x += (dx / dist) * moveAmount;
+              npcRoot.position.z += (dz / dist) * moveAmount;
+
+              // Face movement direction
+              currentRotation = Math.atan2(dx, dz);
+            }
+
+            // Apply oscillation on top of current facing
+            npcRoot.rotation.y =
+              currentRotation + Math.sin(oscillationTime) * oscillationAmount;
+          } else {
+            // Static NPC with just oscillation
+            npcRoot.rotation.y = Math.sin(oscillationTime) * oscillationAmount;
+          }
         };
 
         resolve({
