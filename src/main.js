@@ -107,7 +107,7 @@ let player = null;
 
 showLoading("Loading player...");
 
-const modelUrl = new URL("../boar_test2.glb", import.meta.url);
+const modelUrl = new URL("../boar3.glb", import.meta.url);
 
 loadPlayer(scene, camera, canvas, env, {
   modelUrl: modelUrl.href,

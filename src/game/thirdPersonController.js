@@ -18,12 +18,15 @@ export class ThirdPersonController {
     targetHeight = 1.25,
     playerRadius = 0.55,
     onJump = null,
+    onMovementChange = null,
   }) {
     this.camera = camera;
     this.target = target;
     this.domElement = domElement;
     this.environment = environment;
     this.onJump = onJump;
+    this.onMovementChange = onMovementChange;
+    this._isMoving = false;
 
     // Player params
     this.targetHeight = targetHeight;
@@ -187,6 +190,12 @@ export class ThirdPersonController {
 
     const hasMove = this._moveDir.lengthSq() > 1e-6;
     if (hasMove) this._moveDir.normalize();
+
+    // Notify when movement state changes
+    if (hasMove !== this._isMoving) {
+      this._isMoving = hasMove;
+      if (this.onMovementChange) this.onMovementChange(hasMove);
+    }
 
     const isRunning = this._keysDown.has("ShiftLeft") || this._keysDown.has("ShiftRight");
     const maxSpeed = isRunning ? this.runSpeed : this.walkSpeed;

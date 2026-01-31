@@ -4,6 +4,7 @@ import {
   CanvasTexture,
   Group,
   LoopOnce,
+  LoopRepeat,
   MeshBasicMaterial,
   Sprite,
   SpriteMaterial,
@@ -159,7 +160,7 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
           }
         }
 
-        // Animation helper to play a one-shot animation (like jump)
+        // Animation helper to play animations
         const playAnimation = (name, { loop = false, onFinish = null } = {}) => {
           const action = actions[name];
           if (!action) {
@@ -168,7 +169,9 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
           }
 
           action.reset();
-          if (!loop) {
+          if (loop) {
+            action.setLoop(LoopRepeat, Infinity);
+          } else {
             action.setLoop(LoopOnce, 1);
             action.clampWhenFinished = true;
           }
@@ -185,13 +188,21 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
           }
         };
 
+        // Stop a playing animation
+        const stopAnimation = (name) => {
+          const action = actions[name];
+          if (action) {
+            action.fadeOut(0.2);
+          }
+        };
+
         // Calculate collision radius and camera target height
         const sized = new Vector3();
         new Box3().setFromObject(playerRoot).getSize(sized);
         const playerRadius = Math.max(sized.x, sized.z) * 0.28;
         const targetHeight = Math.max(0.8, Math.min(1.6, sized.y * 0.55));
 
-        // Create controller with jump callback
+        // Create controller with animation callbacks
         const controller = new ThirdPersonController({
           camera,
           target: playerRoot,
@@ -200,6 +211,13 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
           targetHeight,
           playerRadius,
           onJump: () => playAnimation("jump"),
+          onMovementChange: (isMoving) => {
+            if (isMoving) {
+              playAnimation("walk", { loop: true });
+            } else {
+              stopAnimation("walk");
+            }
+          },
         });
 
         resolve({
@@ -209,6 +227,7 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
           controller,
           actions,
           playAnimation,
+          stopAnimation,
         });
       },
       (ev) => {
