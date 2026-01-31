@@ -12,6 +12,7 @@ import {
   Fog,
   Group,
   HemisphereLight,
+  MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
   Sprite,
@@ -190,13 +191,16 @@ loader.load(
     playerModel.position.y -= minY;
     playerRoot.updateMatrixWorld(true);
 
-    // Shadows + ensure materials are lit
+    // Make player fully lit (ignore scene lighting)
     playerModel.traverse((obj) => {
       if (obj.isMesh) {
         obj.castShadow = true;
-        obj.receiveShadow = true;
+        obj.receiveShadow = false;
         if (obj.material) {
-          obj.material.needsUpdate = true;
+          obj.material = new MeshBasicMaterial({
+            map: obj.material.map,
+            color: obj.material.color,
+          });
         }
       }
     });
