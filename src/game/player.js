@@ -1,12 +1,16 @@
 import {
   AnimationMixer,
   Box3,
+  BoxGeometry,
   CanvasTexture,
   Color,
+  CylinderGeometry,
   Group,
   LoopOnce,
   LoopRepeat,
+  Mesh,
   MeshBasicMaterial,
+  SphereGeometry,
   Sprite,
   SpriteMaterial,
   Vector3,
@@ -16,20 +20,34 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { ThirdPersonController } from "./thirdPersonController.js";
 
 /**
- * Creates a nametag sprite with the given name
+ * Creates a nametag sprite with the given name and optional subtitle
  */
-function createNametag(name) {
+function createNametag(name, subtitle = null) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
   const fontSize = 48;
+  const subtitleFontSize = 36;
   const padding = 16;
+  const lineSpacing = 8;
+
+  // Measure text widths
   ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-  const metrics = ctx.measureText(name);
-  const textWidth = metrics.width;
+  const nameWidth = ctx.measureText(name).width;
+
+  let subtitleWidth = 0;
+  if (subtitle) {
+    ctx.font = `bold ${subtitleFontSize}px Arial, sans-serif`;
+    subtitleWidth = ctx.measureText(subtitle).width;
+  }
+
+  const textWidth = Math.max(nameWidth, subtitleWidth);
+  const totalHeight = subtitle
+    ? fontSize + subtitleFontSize + lineSpacing + padding * 1.5
+    : fontSize + padding * 1.5;
 
   canvas.width = textWidth + padding * 2;
-  canvas.height = fontSize + padding * 1.5;
+  canvas.height = totalHeight;
 
   // Semi-transparent black background with rounded corners
   ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
@@ -49,16 +67,29 @@ function createNametag(name) {
   ctx.closePath();
   ctx.fill();
 
-  // White text with slight shadow
-  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "#ffffff";
+  // Shadow settings
   ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
   ctx.shadowBlur = 4;
   ctx.shadowOffsetX = 1;
   ctx.shadowOffsetY = 1;
-  ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+  ctx.textAlign = "center";
+
+  // Name text
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  const nameY = subtitle
+    ? padding / 2 + fontSize / 2
+    : canvas.height / 2;
+  ctx.fillText(name, canvas.width / 2, nameY);
+
+  // Subtitle text (e.g., "Vulnerability: 2")
+  if (subtitle) {
+    ctx.font = `bold ${subtitleFontSize}px Arial, sans-serif`;
+    ctx.fillStyle = "#ff6666";
+    const subtitleY = nameY + fontSize / 2 + lineSpacing + subtitleFontSize / 2;
+    ctx.fillText(subtitle, canvas.width / 2, subtitleY);
+  }
 
   const texture = new CanvasTexture(canvas);
   texture.needsUpdate = true;
@@ -71,11 +102,155 @@ function createNametag(name) {
   });
 
   const sprite = new Sprite(material);
-  const spriteHeight = 0.5;
+  const spriteHeight = subtitle ? 0.7 : 0.5;
   const aspect = canvas.width / canvas.height;
   sprite.scale.set(spriteHeight * aspect, spriteHeight, 1);
 
   return sprite;
+}
+
+/**
+ * Creates a simple procedural kid character model
+ */
+function createKidModel(height = 1.3) {
+  const group = new Group();
+
+  // Colors
+  const skinColor = 0xffcc99;
+  const shirtColor = 0x4488ff;
+  const pantsColor = 0x3344aa;
+  const shoeColor = 0x222222;
+  const hairColor = 0x553311;
+
+  // Proportions based on height
+  const headRadius = height * 0.18;
+  const bodyHeight = height * 0.3;
+  const bodyWidth = height * 0.22;
+  const legHeight = height * 0.25;
+  const legWidth = height * 0.08;
+  const armLength = height * 0.22;
+  const armWidth = height * 0.06;
+
+  // Head
+  const headGeo = new SphereGeometry(headRadius, 16, 12);
+  const headMat = new MeshBasicMaterial({ color: skinColor });
+  const head = new Mesh(headGeo, headMat);
+  head.position.y = legHeight + bodyHeight + headRadius * 0.9;
+  head.castShadow = true;
+  group.add(head);
+
+  // Hair (slightly larger sphere on top)
+  const hairGeo = new SphereGeometry(headRadius * 0.85, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6);
+  const hairMat = new MeshBasicMaterial({ color: hairColor });
+  const hair = new Mesh(hairGeo, hairMat);
+  hair.position.y = head.position.y + headRadius * 0.15;
+  hair.castShadow = true;
+  group.add(hair);
+
+  // Body (torso)
+  const bodyGeo = new BoxGeometry(bodyWidth, bodyHeight, bodyWidth * 0.7);
+  const bodyMat = new MeshBasicMaterial({ color: shirtColor });
+  const body = new Mesh(bodyGeo, bodyMat);
+  body.position.y = legHeight + bodyHeight / 2;
+  body.castShadow = true;
+  group.add(body);
+
+  // Left leg
+  const legGeo = new BoxGeometry(legWidth, legHeight, legWidth);
+  const legMat = new MeshBasicMaterial({ color: pantsColor });
+  const leftLeg = new Mesh(legGeo, legMat);
+  leftLeg.position.set(-bodyWidth * 0.25, legHeight / 2, 0);
+  leftLeg.castShadow = true;
+  group.add(leftLeg);
+
+  // Right leg
+  const rightLeg = new Mesh(legGeo, legMat);
+  rightLeg.position.set(bodyWidth * 0.25, legHeight / 2, 0);
+  rightLeg.castShadow = true;
+  group.add(rightLeg);
+
+  // Shoes
+  const shoeGeo = new BoxGeometry(legWidth * 1.3, height * 0.05, legWidth * 1.5);
+  const shoeMat = new MeshBasicMaterial({ color: shoeColor });
+  const leftShoe = new Mesh(shoeGeo, shoeMat);
+  leftShoe.position.set(-bodyWidth * 0.25, height * 0.025, legWidth * 0.2);
+  leftShoe.castShadow = true;
+  group.add(leftShoe);
+
+  const rightShoe = new Mesh(shoeGeo, shoeMat);
+  rightShoe.position.set(bodyWidth * 0.25, height * 0.025, legWidth * 0.2);
+  rightShoe.castShadow = true;
+  group.add(rightShoe);
+
+  // Left arm
+  const armGeo = new BoxGeometry(armWidth, armLength, armWidth);
+  const armMat = new MeshBasicMaterial({ color: skinColor });
+  const leftArm = new Mesh(armGeo, armMat);
+  leftArm.position.set(-bodyWidth / 2 - armWidth / 2, legHeight + bodyHeight - armLength / 2, 0);
+  leftArm.castShadow = true;
+  group.add(leftArm);
+
+  // Right arm
+  const rightArm = new Mesh(armGeo, armMat);
+  rightArm.position.set(bodyWidth / 2 + armWidth / 2, legHeight + bodyHeight - armLength / 2, 0);
+  rightArm.castShadow = true;
+  group.add(rightArm);
+
+  // Eyes
+  const eyeGeo = new SphereGeometry(headRadius * 0.12, 8, 6);
+  const eyeMat = new MeshBasicMaterial({ color: 0x000000 });
+  const leftEye = new Mesh(eyeGeo, eyeMat);
+  leftEye.position.set(-headRadius * 0.35, head.position.y + headRadius * 0.1, headRadius * 0.85);
+  group.add(leftEye);
+
+  const rightEye = new Mesh(eyeGeo, eyeMat);
+  rightEye.position.set(headRadius * 0.35, head.position.y + headRadius * 0.1, headRadius * 0.85);
+  group.add(rightEye);
+
+  return group;
+}
+
+/**
+ * Spawns a static kid NPC (procedural model, no GLB)
+ */
+export function spawnKid(scene, options = {}) {
+  const {
+    name = "Kid",
+    subtitle = null,
+    height = 1.3,
+    position = { x: 0, y: 0, z: 0 },
+  } = options;
+
+  const kidRoot = new Group();
+
+  // Create kid model
+  const kidModel = createKidModel(height);
+  kidRoot.add(kidModel);
+
+  // Add nametag
+  const nametag = createNametag(name, subtitle);
+  nametag.position.y = height + 0.5;
+  kidRoot.add(nametag);
+
+  // Position
+  kidRoot.position.set(position.x, position.y, position.z);
+  scene.add(kidRoot);
+
+  // Oscillation for idle sway
+  let oscillationTime = Math.random() * Math.PI * 2;
+  const oscillationSpeed = 1.0 + Math.random() * 0.3;
+  const oscillationAmount = 0.25;
+
+  const update = (dt) => {
+    oscillationTime += dt * oscillationSpeed;
+    kidRoot.rotation.y = Math.sin(oscillationTime) * oscillationAmount;
+  };
+
+  return {
+    root: kidRoot,
+    model: kidModel,
+    update,
+  };
 }
 
 /**
@@ -103,6 +278,7 @@ export function loadNPC(scene, options = {}) {
   const {
     modelUrl,
     name = "NPC",
+    subtitle = null,
     desiredHeight = 2.1,
     position = { x: 0, y: 0, z: 0 },
     animation = null,
@@ -159,7 +335,7 @@ export function loadNPC(scene, options = {}) {
         });
 
         // Add nametag above NPC
-        const nametag = createNametag(name);
+        const nametag = createNametag(name, subtitle);
         const npcBounds = new Box3().setFromObject(npcModel);
         const npcHeight = npcBounds.max.y - npcBounds.min.y;
         nametag.position.y = npcHeight + 0.4;

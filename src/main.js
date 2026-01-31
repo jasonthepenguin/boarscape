@@ -15,7 +15,7 @@ import {
 } from "three";
 
 import { createEnvironment } from "./game/environment.js";
-import { loadPlayer, loadNPC } from "./game/player.js";
+import { loadPlayer, loadNPC, spawnKid } from "./game/player.js";
 
 // =============================================================================
 // DOM Elements
@@ -122,6 +122,15 @@ const npcConfigs = [
   { name: "Grok4", tint: "#ddffaa", formationOffset: { x: 0, z: -6 } },
 ];
 
+// Kid NPC (procedural model)
+const kidNpc = spawnKid(scene, {
+  name: "Kid",
+  subtitle: "Vulnerability: 2",
+  position: { x: 8, y: 0, z: 5 },
+  height: 1.3,
+});
+npcs.push(kidNpc);
+
 loadPlayer(scene, camera, canvas, env, {
   modelUrl: modelUrl.href,
   playerName: "Childpredator32",
@@ -146,6 +155,7 @@ loadPlayer(scene, camera, canvas, env, {
         npcs.push(npc);
       });
     }
+
   })
   .catch((err) => {
     console.error(err);
