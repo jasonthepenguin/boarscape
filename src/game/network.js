@@ -6,6 +6,7 @@ export class NetworkManager {
     this.onPlayerJoined = null;
     this.onPlayerLeft = null;
     this.onPositions = null;
+    this.onNpcPositions = null;
   }
 
   connect(name, color) {
@@ -30,6 +31,7 @@ export class NetworkManager {
           this.onPlayerLeft?.(msg);
         } else if (msg.type === "positions") {
           this.onPositions?.(msg.players);
+          if (msg.npcs) this.onNpcPositions?.(msg.npcs);
         }
       };
 

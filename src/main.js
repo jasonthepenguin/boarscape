@@ -8,6 +8,7 @@ import { createEnvironment } from "./game/environment/index.js";
 import { InputManager } from "./game/input.js";
 import { loadPlayer } from "./game/player.js";
 import { RemotePlayerManager } from "./game/remotePlayers.js";
+import { NpcManager } from "./game/npcManager.js";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
 
@@ -19,7 +20,7 @@ mount(App, {
   },
 });
 
-function startGame({ name, color, network, existingPlayers }) {
+function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const canvas = document.getElementById("game");
   canvas.style.display = "block";
 
@@ -31,10 +32,16 @@ function startGame({ name, color, network, existingPlayers }) {
 
   const input = new InputManager(canvas);
   const remotePlayers = new RemotePlayerManager(scene, modelUrl);
+  const npcManager = new NpcManager(scene);
 
   // Spawn existing players that were already on the server
   for (const p of existingPlayers) {
     remotePlayers.addPlayer(p.id, p.name, p.color);
+  }
+
+  // Spawn NPCs that are already on the server
+  for (const n of existingNpcs) {
+    npcManager.addNpc(n.id, n.name);
   }
 
   // Wire up network events
@@ -48,6 +55,9 @@ function startGame({ name, color, network, existingPlayers }) {
     // Only update remote players, not ourselves
     const remoteStates = states.filter((s) => s.id !== network.playerId);
     remotePlayers.updatePositions(remoteStates);
+  };
+  network.onNpcPositions = (states) => {
+    npcManager.updatePositions(states);
   };
 
   let player = null;
@@ -77,6 +87,7 @@ function startGame({ name, color, network, existingPlayers }) {
     if (player?.controller) player.controller.update(dt);
     if (player?.mixer) player.mixer.update(dt);
     remotePlayers.update(dt);
+    npcManager.update(dt);
 
     // Send position to server
     if (player?.root) {

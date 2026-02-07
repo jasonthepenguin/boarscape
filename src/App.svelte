@@ -20,9 +20,9 @@
     screen = "serverSelect";
   }
 
-  function handleServerJoined({ network, existingPlayers }) {
+  function handleServerJoined({ network, existingPlayers, existingNpcs }) {
     screen = "game";
-    onstart({ name: playerName, color: playerColor, network, existingPlayers });
+    onstart({ name: playerName, color: playerColor, network, existingPlayers, existingNpcs });
   }
 </script>
 

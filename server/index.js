@@ -1,4 +1,5 @@
 import { WebSocketServer } from "ws";
+import { createNpcs, updateNpcs, serializeNpcs } from "./npcs.js";
 
 const PORT = 3001;
 const MAX_PLAYERS = 30;
@@ -6,6 +7,7 @@ const TICK_RATE = 20;
 
 const wss = new WebSocketServer({ port: PORT });
 const players = new Map();
+const npcs = createNpcs();
 let nextId = 1;
 
 wss.on("connection", (ws) => {
@@ -55,7 +57,7 @@ wss.on("connection", (ws) => {
           });
         }
       }
-      ws.send(JSON.stringify({ type: "joined", id: playerId, players: others }));
+      ws.send(JSON.stringify({ type: "joined", id: playerId, players: others, npcs: serializeNpcs(npcs) }));
 
       // Notify everyone else
       broadcast(
@@ -106,13 +108,16 @@ function broadcast(msg, excludeId = null) {
   }
 }
 
-// Broadcast all player positions at fixed tick rate
+// Tick: update NPCs and broadcast all positions
+const tickDt = 1 / TICK_RATE;
 setInterval(() => {
+  updateNpcs(npcs, tickDt);
+
   if (players.size === 0) return;
 
-  const states = [];
+  const playerStates = [];
   for (const [, p] of players) {
-    states.push({
+    playerStates.push({
       id: p.id,
       x: p.x,
       y: p.y,
@@ -122,7 +127,11 @@ setInterval(() => {
     });
   }
 
-  const data = JSON.stringify({ type: "positions", players: states });
+  const data = JSON.stringify({
+    type: "positions",
+    players: playerStates,
+    npcs: serializeNpcs(npcs),
+  });
   for (const [, p] of players) {
     if (p.ws.readyState === 1) {
       p.ws.send(data);
@@ -132,3 +141,4 @@ setInterval(() => {
 
 console.log(`BoarScape server running on ws://localhost:${PORT}`);
 console.log(`Max players: ${MAX_PLAYERS}, tick rate: ${TICK_RATE}Hz`);
+console.log(`${npcs.length} NPCs spawned`);
