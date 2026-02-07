@@ -90,3 +90,19 @@ export const TRUNK_COLORS = ["#5c3d2e", "#7b4a2a", "#6b5344", "#4a3728", "#8b691
 export const LEAF_COLORS = ["#2f8f3a", "#1e6b2e", "#4a9f4a", "#3d7a3d", "#5aaf5a", "#2d5a1e", "#6b8e23"];
 export const BIRCH_TRUNK_COLORS = ["#d4c8b8", "#e8dcc8", "#c9b99a", "#bfb5a0"];
 export const BIRCH_LEAF_COLORS = ["#8bc34a", "#9ccc65", "#7cb342", "#aed581"];
+
+// =============================================================================
+// Boar color presets
+// =============================================================================
+export const BOAR_COLOR_PRESETS = [
+  { name: "Natural", hex: "#ffffff" },
+  { name: "Dark Brown", hex: "#6b3a2a" },
+  { name: "Russet", hex: "#a0522d" },
+  { name: "Grey", hex: "#808080" },
+  { name: "Black", hex: "#2a2a2a" },
+  { name: "Albino", hex: "#f5e6d3" },
+  { name: "Golden", hex: "#daa520" },
+  { name: "Olive", hex: "#6b8e23" },
+  { name: "Frost", hex: "#b0c4de" },
+  { name: "Sandy", hex: "#d2b48c" },
+];

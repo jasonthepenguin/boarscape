@@ -1,7 +1,22 @@
-export function setupMenu(onStart) {
+export function setupMenu(onNameReady) {
   const menuEl = document.querySelector("#menu");
   const nameInput = document.querySelector("#name-input");
   const playBtn = document.querySelector("#play-btn");
+
+  function submit() {
+    const name = nameInput.value.trim() || "Player";
+    menuEl.style.display = "none";
+    onNameReady(name);
+  }
+
+  playBtn.addEventListener("click", submit);
+
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+}
+
+export function getGameDOM() {
   const canvas = document.querySelector("#game");
   const hudEl = document.querySelector("#hud");
   const loadingEl = document.querySelector("#loading");
@@ -17,22 +32,10 @@ export function setupMenu(onStart) {
     loadingEl.style.display = "none";
   }
 
-  function startGame(playerName) {
-    menuEl.style.display = "none";
+  function showGame() {
     canvas.style.display = "block";
     hudEl.style.display = "block";
-    onStart(playerName, { canvas, showLoading, hideLoading });
   }
 
-  playBtn.addEventListener("click", () => {
-    const name = nameInput.value.trim() || "Player";
-    startGame(name);
-  });
-
-  nameInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      const name = nameInput.value.trim() || "Player";
-      startGame(name);
-    }
-  });
+  return { canvas, showLoading, hideLoading, showGame };
 }

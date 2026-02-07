@@ -2,6 +2,7 @@ import {
   AnimationMixer,
   Box3,
   CanvasTexture,
+  Color,
   Group,
   LoopOnce,
   LoopRepeat,
@@ -81,7 +82,8 @@ function createNametag(name) {
 /**
  * Configures the player model's materials and shadows
  */
-function setupPlayerMaterials(model) {
+function setupPlayerMaterials(model, colorHex) {
+  const tint = colorHex ? new Color(colorHex) : null;
   model.traverse((obj) => {
     if (obj.isMesh) {
       obj.castShadow = true;
@@ -89,7 +91,7 @@ function setupPlayerMaterials(model) {
       if (obj.material) {
         obj.material = new MeshBasicMaterial({
           map: obj.material.map,
-          color: obj.material.color,
+          color: tint || obj.material.color,
         });
       }
     }
@@ -104,6 +106,7 @@ export function loadPlayer(scene, camera, input, environment, options = {}) {
     modelUrl,
     playerName = "Player",
     desiredHeight = PLAYER_DESIRED_HEIGHT,
+    color = null,
     onProgress = () => {},
   } = options;
 
@@ -132,8 +135,8 @@ export function loadPlayer(scene, camera, input, environment, options = {}) {
         playerModel.position.y -= minY;
         playerRoot.updateMatrixWorld(true);
 
-        // Setup materials (unlit for visibility)
-        setupPlayerMaterials(playerModel);
+        // Setup materials (unlit for visibility, with optional color tint)
+        setupPlayerMaterials(playerModel, color);
 
         // Add nametag above player
         const nametag = createNametag(playerName);

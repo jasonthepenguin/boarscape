@@ -1,12 +1,22 @@
 import "./style.css";
 
-import { setupMenu } from "./game/menu.js";
+import { setupMenu, getGameDOM } from "./game/menu.js";
 import { createScene } from "./game/scene.js";
 import { createEnvironment } from "./game/environment/index.js";
 import { InputManager } from "./game/input.js";
 import { loadPlayer } from "./game/player.js";
+import { showCharacterEditor } from "./game/characterEditor.js";
 
-setupMenu((playerName, { canvas, showLoading, hideLoading }) => {
+const modelUrl = new URL("../boar3.glb", import.meta.url).href;
+
+setupMenu(async (playerName) => {
+  // Character editor — pick a color with 3D preview
+  const { color } = await showCharacterEditor(modelUrl);
+
+  // Transition to game
+  const { canvas, showLoading, hideLoading, showGame } = getGameDOM();
+  showGame();
+
   const { scene, camera, start } = createScene(canvas);
 
   showLoading("Loading world...");
@@ -18,11 +28,10 @@ setupMenu((playerName, { canvas, showLoading, hideLoading }) => {
   let player = null;
   showLoading("Loading player...");
 
-  const modelUrl = new URL("../boar3.glb", import.meta.url).href;
-
   loadPlayer(scene, camera, input, env, {
     modelUrl,
     playerName,
+    color,
     onProgress: (pct) => showLoading(`Loading player... ${pct}%`),
   })
     .then((result) => {
