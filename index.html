@@ -10,9 +10,19 @@
   </head>
   <body>
     <div id="app">
-      <canvas id="game"></canvas>
+      <!-- Main Menu -->
+      <div id="menu">
+        <div id="menu-title">BoarScape</div>
+        <div id="menu-box">
+          <label id="menu-label" for="name-input">Enter your name</label>
+          <input id="name-input" type="text" maxlength="16" placeholder="Player" autocomplete="off" />
+          <button id="play-btn">Play</button>
+        </div>
+      </div>
 
-      <div id="hud">
+      <canvas id="game" style="display: none"></canvas>
+
+      <div id="hud" style="display: none">
         <div id="loading" class="panel">Loading…</div>
 
         <!-- Game Title -->
