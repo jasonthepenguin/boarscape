@@ -13,6 +13,7 @@ import {
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { ThirdPersonController } from "./thirdPersonController.js";
+import { PLAYER_DESIRED_HEIGHT } from "../config.js";
 
 /**
  * Creates a nametag sprite with the given name
@@ -98,11 +99,11 @@ function setupPlayerMaterials(model) {
 /**
  * Loads and sets up the player with model, nametag, and controller
  */
-export function loadPlayer(scene, camera, domElement, environment, options = {}) {
+export function loadPlayer(scene, camera, input, environment, options = {}) {
   const {
     modelUrl,
     playerName = "Player",
-    desiredHeight = 2.1,
+    desiredHeight = PLAYER_DESIRED_HEIGHT,
     onProgress = () => {},
   } = options;
 
@@ -206,7 +207,7 @@ export function loadPlayer(scene, camera, domElement, environment, options = {})
         const controller = new ThirdPersonController({
           camera,
           target: playerRoot,
-          domElement,
+          input,
           environment,
           targetHeight,
           playerRadius,

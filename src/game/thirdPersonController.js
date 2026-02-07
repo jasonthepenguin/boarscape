@@ -1,7 +1,21 @@
 import { MathUtils, Quaternion, Vector3 } from "three";
+import {
+  WALK_SPEED,
+  RUN_SPEED,
+  JUMP_SPEED,
+  GRAVITY,
+  ROTATION_SPEED,
+  CAMERA_DISTANCE,
+  CAMERA_MIN_DISTANCE,
+  CAMERA_MAX_DISTANCE,
+  CAMERA_DEFAULT_PHI,
+  CAMERA_MIN_PHI,
+  CAMERA_MAX_PHI,
+  CAMERA_SMOOTH,
+  CAMERA_ROTATE_SPEED,
+} from "../config.js";
 
 function damp(current, target, lambda, dt) {
-  // Exponential damping (frame-rate independent)
   return MathUtils.lerp(current, target, 1 - Math.exp(-lambda * dt));
 }
 
@@ -13,7 +27,7 @@ export class ThirdPersonController {
   constructor({
     camera,
     target,
-    domElement,
+    input,
     environment,
     targetHeight = 1.25,
     playerRadius = 0.55,
@@ -22,7 +36,7 @@ export class ThirdPersonController {
   }) {
     this.camera = camera;
     this.target = target;
-    this.domElement = domElement;
+    this.input = input;
     this.environment = environment;
     this.onJump = onJump;
     this.onMovementChange = onMovementChange;
@@ -31,31 +45,25 @@ export class ThirdPersonController {
     // Player params
     this.targetHeight = targetHeight;
     this.playerRadius = playerRadius;
-    this.walkSpeed = 4.6;
-    this.runSpeed = 7.4;
-    this.jumpSpeed = 7.2;
-    this.gravity = 18.5;
-    this.rotationSpeed = 14;
+    this.walkSpeed = WALK_SPEED;
+    this.runSpeed = RUN_SPEED;
+    this.jumpSpeed = JUMP_SPEED;
+    this.gravity = GRAVITY;
+    this.rotationSpeed = ROTATION_SPEED;
 
     // Camera params
-    this.distance = 8.5;
-    this.minDistance = 3.6;
-    this.maxDistance = 18.0;
-    this.yaw = 0; // around Y axis
-    this.phi = 1.12; // polar angle from +Y (0..PI)
-    this.minPhi = 0.55;
-    this.maxPhi = 1.45;
-    this.cameraSmooth = 14;
+    this.distance = CAMERA_DISTANCE;
+    this.minDistance = CAMERA_MIN_DISTANCE;
+    this.maxDistance = CAMERA_MAX_DISTANCE;
+    this.yaw = 0;
+    this.phi = CAMERA_DEFAULT_PHI;
+    this.minPhi = CAMERA_MIN_PHI;
+    this.maxPhi = CAMERA_MAX_PHI;
+    this.cameraSmooth = CAMERA_SMOOTH;
 
     // State
     this.velocity = new Vector3(0, 0, 0);
     this.onGround = true;
-    this._keysDown = new Set();
-    this._jumpRequested = false;
-    this._dragging = false;
-    this._pointerId = null;
-    this._lastPointerX = 0;
-    this._lastPointerY = 0;
 
     // Temps
     this._up = new Vector3(0, 1, 0);
@@ -67,88 +75,22 @@ export class ThirdPersonController {
     this._desiredCameraPos = new Vector3();
     this._cameraOffset = new Vector3();
     this._desiredFacing = new Quaternion();
-
-    // Bind handlers
-    this._onKeyDown = this._onKeyDown.bind(this);
-    this._onKeyUp = this._onKeyUp.bind(this);
-    this._onPointerDown = this._onPointerDown.bind(this);
-    this._onPointerMove = this._onPointerMove.bind(this);
-    this._onPointerUp = this._onPointerUp.bind(this);
-    this._onWheel = this._onWheel.bind(this);
-    this._onContextMenu = (e) => e.preventDefault();
-
-    window.addEventListener("keydown", this._onKeyDown);
-    window.addEventListener("keyup", this._onKeyUp);
-
-    domElement.addEventListener("pointerdown", this._onPointerDown);
-    domElement.addEventListener("pointermove", this._onPointerMove);
-    domElement.addEventListener("pointerup", this._onPointerUp);
-    domElement.addEventListener("pointercancel", this._onPointerUp);
-    domElement.addEventListener("wheel", this._onWheel, { passive: false });
-    domElement.addEventListener("contextmenu", this._onContextMenu);
-  }
-
-  dispose() {
-    window.removeEventListener("keydown", this._onKeyDown);
-    window.removeEventListener("keyup", this._onKeyUp);
-
-    this.domElement.removeEventListener("pointerdown", this._onPointerDown);
-    this.domElement.removeEventListener("pointermove", this._onPointerMove);
-    this.domElement.removeEventListener("pointerup", this._onPointerUp);
-    this.domElement.removeEventListener("pointercancel", this._onPointerUp);
-    this.domElement.removeEventListener("wheel", this._onWheel);
-    this.domElement.removeEventListener("contextmenu", this._onContextMenu);
-  }
-
-  _onKeyDown(e) {
-    this._keysDown.add(e.code);
-    if (e.code === "Space" && !e.repeat) {
-      this._jumpRequested = true;
-    }
-  }
-
-  _onKeyUp(e) {
-    this._keysDown.delete(e.code);
-  }
-
-  _onPointerDown(e) {
-    if (e.button !== 0) return;
-    this._dragging = true;
-    this._pointerId = e.pointerId;
-    this._lastPointerX = e.clientX;
-    this._lastPointerY = e.clientY;
-    this.domElement.setPointerCapture?.(e.pointerId);
-    this.domElement.classList.add("dragging");
-  }
-
-  _onPointerMove(e) {
-    if (!this._dragging) return;
-    if (this._pointerId != null && e.pointerId !== this._pointerId) return;
-    const dx = e.clientX - this._lastPointerX;
-    const dy = e.clientY - this._lastPointerY;
-    this._lastPointerX = e.clientX;
-    this._lastPointerY = e.clientY;
-
-    const rotateSpeed = 0.0042;
-    this.yaw -= dx * rotateSpeed;
-    this.phi = clamp(this.phi + dy * rotateSpeed, this.minPhi, this.maxPhi);
-  }
-
-  _onPointerUp(e) {
-    if (this._pointerId != null && e.pointerId !== this._pointerId) return;
-    this._dragging = false;
-    this._pointerId = null;
-    this.domElement.classList.remove("dragging");
-  }
-
-  _onWheel(e) {
-    e.preventDefault();
-    const delta = Math.sign(e.deltaY);
-    this.distance = clamp(this.distance + delta * 0.85, this.minDistance, this.maxDistance);
   }
 
   update(dt) {
     if (!this.target) return;
+
+    // Consume input deltas
+    const { dx, dy } = this.input.consumePointerDelta();
+    if (dx !== 0 || dy !== 0) {
+      this.yaw -= dx * CAMERA_ROTATE_SPEED;
+      this.phi = clamp(this.phi + dy * CAMERA_ROTATE_SPEED, this.minPhi, this.maxPhi);
+    }
+
+    const wheelDelta = this.input.consumeWheelDelta();
+    if (wheelDelta !== 0) {
+      this.distance = clamp(this.distance + wheelDelta * 0.85, this.minDistance, this.maxDistance);
+    }
 
     // Target point for camera
     this._targetPos.copy(this.target.position);
@@ -181,8 +123,12 @@ export class ThirdPersonController {
     }
     this._camRight.crossVectors(this._camForward, this._up).normalize();
 
-    const xInput = (this._keysDown.has("KeyD") ? 1 : 0) + (this._keysDown.has("KeyA") ? -1 : 0);
-    const zInput = (this._keysDown.has("KeyW") ? 1 : 0) + (this._keysDown.has("KeyS") ? -1 : 0);
+    const xInput =
+      (this.input.isKeyDown("KeyD") ? 1 : 0) +
+      (this.input.isKeyDown("KeyA") ? -1 : 0);
+    const zInput =
+      (this.input.isKeyDown("KeyW") ? 1 : 0) +
+      (this.input.isKeyDown("KeyS") ? -1 : 0);
 
     this._moveDir.set(0, 0, 0);
     if (xInput !== 0) this._moveDir.addScaledVector(this._camRight, xInput);
@@ -197,7 +143,8 @@ export class ThirdPersonController {
       if (this.onMovementChange) this.onMovementChange(hasMove);
     }
 
-    const isRunning = this._keysDown.has("ShiftLeft") || this._keysDown.has("ShiftRight");
+    const isRunning =
+      this.input.isKeyDown("ShiftLeft") || this.input.isKeyDown("ShiftRight");
     const maxSpeed = isRunning ? this.runSpeed : this.walkSpeed;
     this._desiredVel.copy(this._moveDir).multiplyScalar(hasMove ? maxSpeed : 0);
 
@@ -206,12 +153,11 @@ export class ThirdPersonController {
     this.velocity.z = damp(this.velocity.z, this._desiredVel.z, accel, dt);
 
     // Jump/gravity
-    if (this.onGround && this._jumpRequested) {
+    if (this.onGround && this.input.wasJumpPressed()) {
       this.velocity.y = this.jumpSpeed;
       this.onGround = false;
       if (this.onJump) this.onJump();
     }
-    this._jumpRequested = false;
 
     if (!this.onGround) {
       this.velocity.y -= this.gravity * dt;
@@ -241,14 +187,14 @@ export class ThirdPersonController {
     if (colliders.length) {
       for (let i = 0; i < colliders.length; i++) {
         const c = colliders[i];
-        const dx = this.target.position.x - c.position.x;
-        const dz = this.target.position.z - c.position.z;
+        const cdx = this.target.position.x - c.position.x;
+        const cdz = this.target.position.z - c.position.z;
         const r = this.playerRadius + c.radius;
-        const d2 = dx * dx + dz * dz;
+        const d2 = cdx * cdx + cdz * cdz;
         if (d2 < r * r) {
           const d = Math.sqrt(d2) || 0.0001;
-          const nx = dx / d;
-          const nz = dz / d;
+          const nx = cdx / d;
+          const nz = cdz / d;
           const push = r - d;
           this.target.position.x += nx * push;
           this.target.position.z += nz * push;
@@ -272,4 +218,3 @@ export class ThirdPersonController {
     }
   }
 }
-
