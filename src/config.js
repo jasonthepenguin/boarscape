@@ -86,4 +86,6 @@ export const BOAR_COLOR_PRESETS = [
   { name: "Olive", hex: "#6b8e23" },
   { name: "Frost", hex: "#b0c4de" },
   { name: "Sandy", hex: "#d2b48c" },
+  { name: "Pink", hex: "#e75480" },
+  { name: "Purple", hex: "#7b2d8e" },
 ];
