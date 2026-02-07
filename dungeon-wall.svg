@@ -1,0 +1,219 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <!-- Stone texture noise -->
+    <filter id="stoneNoise" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="42" result="noise"/>
+      <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise"/>
+      <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply"/>
+    </filter>
+    <!-- Torch glow -->
+    <radialGradient id="torchGlow1" cx="200" cy="180" r="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ff8c00" stop-opacity="0.35"/>
+      <stop offset="40%" stop-color="#ff5500" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="torchGlow2" cx="600" cy="180" r="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ff8c00" stop-opacity="0.35"/>
+      <stop offset="40%" stop-color="#ff5500" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Flame gradient -->
+    <radialGradient id="flame" cx="50%" cy="70%" r="50%">
+      <stop offset="0%" stop-color="#ffe44d"/>
+      <stop offset="40%" stop-color="#ff8c00"/>
+      <stop offset="100%" stop-color="#cc3300"/>
+    </radialGradient>
+    <!-- Vignette for depth -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.55)"/>
+    </radialGradient>
+    <!-- Moss color -->
+    <linearGradient id="mossGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2d5a1e"/>
+      <stop offset="100%" stop-color="#1a3a10"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="600" fill="#1a1a1a"/>
+
+  <!-- Wall base group with stone filter -->
+  <g filter="url(#stoneNoise)">
+    <!-- Row 1 (top) -->
+    <rect x="0" y="0" width="160" height="85" fill="#3a3632" stroke="#222" stroke-width="3"/>
+    <rect x="160" y="0" width="200" height="85" fill="#423e38" stroke="#222" stroke-width="3"/>
+    <rect x="360" y="0" width="130" height="85" fill="#38342f" stroke="#222" stroke-width="3"/>
+    <rect x="490" y="0" width="180" height="85" fill="#3d3933" stroke="#222" stroke-width="3"/>
+    <rect x="670" y="0" width="130" height="85" fill="#353129" stroke="#222" stroke-width="3"/>
+
+    <!-- Row 2 -->
+    <rect x="0" y="85" width="110" height="95" fill="#3e3a34" stroke="#222" stroke-width="3"/>
+    <rect x="110" y="85" width="180" height="95" fill="#363229" stroke="#222" stroke-width="3"/>
+    <rect x="290" y="85" width="150" height="95" fill="#403c36" stroke="#222" stroke-width="3"/>
+    <rect x="440" y="85" width="200" height="95" fill="#3a3630" stroke="#222" stroke-width="3"/>
+    <rect x="640" y="85" width="160" height="95" fill="#34302a" stroke="#222" stroke-width="3"/>
+
+    <!-- Row 3 -->
+    <rect x="0" y="180" width="190" height="90" fill="#37332d" stroke="#222" stroke-width="3"/>
+    <rect x="190" y="180" width="140" height="90" fill="#3c3832" stroke="#222" stroke-width="3"/>
+    <rect x="330" y="180" width="170" height="90" fill="#413d37" stroke="#222" stroke-width="3"/>
+    <rect x="500" y="180" width="120" height="90" fill="#39352f" stroke="#222" stroke-width="3"/>
+    <rect x="620" y="180" width="180" height="90" fill="#3e3a34" stroke="#222" stroke-width="3"/>
+
+    <!-- Row 4 -->
+    <rect x="0" y="270" width="140" height="100" fill="#3b3731" stroke="#222" stroke-width="3"/>
+    <rect x="140" y="270" width="210" height="100" fill="#35312b" stroke="#222" stroke-width="3"/>
+    <rect x="350" y="270" width="160" height="100" fill="#3f3b35" stroke="#222" stroke-width="3"/>
+    <rect x="510" y="270" width="150" height="100" fill="#373329" stroke="#222" stroke-width="3"/>
+    <rect x="660" y="270" width="140" height="100" fill="#3d3933" stroke="#222" stroke-width="3"/>
+
+    <!-- Row 5 -->
+    <rect x="0" y="370" width="170" height="95" fill="#393530" stroke="#222" stroke-width="3"/>
+    <rect x="170" y="370" width="150" height="95" fill="#413d37" stroke="#222" stroke-width="3"/>
+    <rect x="320" y="370" width="190" height="95" fill="#36322c" stroke="#222" stroke-width="3"/>
+    <rect x="510" y="370" width="130" height="95" fill="#3a3630" stroke="#222" stroke-width="3"/>
+    <rect x="640" y="370" width="160" height="95" fill="#3e3a34" stroke="#222" stroke-width="3"/>
+
+    <!-- Row 6 (bottom) -->
+    <rect x="0" y="465" width="200" height="135" fill="#34302a" stroke="#222" stroke-width="3"/>
+    <rect x="200" y="465" width="160" height="135" fill="#3c3832" stroke="#222" stroke-width="3"/>
+    <rect x="360" y="465" width="140" height="135" fill="#393530" stroke="#222" stroke-width="3"/>
+    <rect x="500" y="465" width="180" height="135" fill="#37332d" stroke="#222" stroke-width="3"/>
+    <rect x="680" y="465" width="120" height="135" fill="#3b3731" stroke="#222" stroke-width="3"/>
+  </g>
+
+  <!-- Cracks on stones -->
+  <g stroke="#26231e" stroke-width="1.5" fill="none" opacity="0.7">
+    <path d="M80 30 L95 55 L88 75"/>
+    <path d="M420 10 L435 40 L425 70"/>
+    <path d="M700 25 L715 50 L705 80"/>
+    <path d="M50 300 L70 330 L60 360"/>
+    <path d="M530 290 L545 320 L555 355"/>
+    <path d="M250 390 L240 420 L255 450"/>
+    <path d="M680 400 L700 430 L690 455"/>
+    <path d="M150 490 L165 520 L155 560"/>
+    <path d="M580 480 L590 510 L575 550"/>
+    <path d="M320 200 L340 230 L330 255"/>
+  </g>
+
+  <!-- Darker inner edges for depth (bevel effect) -->
+  <g stroke="#1a1714" stroke-width="1" fill="none" opacity="0.4">
+    <line x1="2" y1="87" x2="798" y2="87"/>
+    <line x1="2" y1="182" x2="798" y2="182"/>
+    <line x1="2" y1="272" x2="798" y2="272"/>
+    <line x1="2" y1="372" x2="798" y2="372"/>
+    <line x1="2" y1="467" x2="798" y2="467"/>
+  </g>
+
+  <!-- Moss patches -->
+  <g fill="url(#mossGrad)" opacity="0.6">
+    <ellipse cx="50" cy="465" rx="40" ry="8"/>
+    <ellipse cx="330" cy="465" rx="25" ry="6"/>
+    <ellipse cx="720" cy="370" rx="30" ry="7"/>
+    <ellipse cx="160" cy="270" rx="22" ry="5"/>
+    <ellipse cx="580" cy="180" rx="18" ry="5"/>
+    <path d="M0 560 Q20 545 50 555 Q70 548 100 558 L100 570 Q60 560 30 568 Q10 564 0 570Z"/>
+    <path d="M350 560 Q370 548 400 555 Q420 545 450 558 L450 570 Q420 558 390 565 Q365 560 350 570Z"/>
+    <path d="M680 555 Q700 542 730 552 Q760 545 800 555 L800 570 Q760 558 730 562 Q700 555 680 565Z"/>
+  </g>
+
+  <!-- Dripping water stains -->
+  <g fill="none" stroke="#2a3a2a" stroke-width="2" opacity="0.3">
+    <path d="M450 0 L452 40 L449 80 L451 120"/>
+    <path d="M120 85 L118 150 L120 200"/>
+    <path d="M650 180 L652 230 L649 270 L651 310"/>
+  </g>
+
+  <!-- Torch bracket left -->
+  <g transform="translate(200, 120)">
+    <!-- Bracket -->
+    <rect x="-8" y="20" width="16" height="8" rx="2" fill="#5a4a30"/>
+    <rect x="-4" y="0" width="8" height="28" rx="2" fill="#6b5a3a"/>
+    <rect x="-3" y="-8" width="6" height="12" rx="1" fill="#7a6a44"/>
+    <!-- Torch wood -->
+    <rect x="-5" y="-40" width="10" height="38" rx="2" fill="#5c3d1e"/>
+    <rect x="-4" y="-38" width="8" height="34" rx="1" fill="#6d4e2f"/>
+    <!-- Flame -->
+    <ellipse cx="0" cy="-52" rx="10" ry="16" fill="url(#flame)" opacity="0.95"/>
+    <ellipse cx="0" cy="-55" rx="6" ry="10" fill="#ffe44d" opacity="0.7"/>
+    <ellipse cx="0" cy="-58" rx="3" ry="6" fill="#fff4b0" opacity="0.8"/>
+    <!-- Sparks -->
+    <circle cx="-8" cy="-65" r="1.5" fill="#ffaa00" opacity="0.6"/>
+    <circle cx="5" cy="-70" r="1" fill="#ff8800" opacity="0.5"/>
+    <circle cx="-3" cy="-72" r="1.2" fill="#ffcc00" opacity="0.4"/>
+  </g>
+
+  <!-- Torch bracket right -->
+  <g transform="translate(600, 120)">
+    <rect x="-8" y="20" width="16" height="8" rx="2" fill="#5a4a30"/>
+    <rect x="-4" y="0" width="8" height="28" rx="2" fill="#6b5a3a"/>
+    <rect x="-3" y="-8" width="6" height="12" rx="1" fill="#7a6a44"/>
+    <rect x="-5" y="-40" width="10" height="38" rx="2" fill="#5c3d1e"/>
+    <rect x="-4" y="-38" width="8" height="34" rx="1" fill="#6d4e2f"/>
+    <ellipse cx="0" cy="-52" rx="10" ry="16" fill="url(#flame)" opacity="0.95"/>
+    <ellipse cx="0" cy="-55" rx="6" ry="10" fill="#ffe44d" opacity="0.7"/>
+    <ellipse cx="0" cy="-58" rx="3" ry="6" fill="#fff4b0" opacity="0.8"/>
+    <circle cx="7" cy="-66" r="1.5" fill="#ffaa00" opacity="0.6"/>
+    <circle cx="-6" cy="-71" r="1" fill="#ff8800" opacity="0.5"/>
+    <circle cx="2" cy="-73" r="1.2" fill="#ffcc00" opacity="0.4"/>
+  </g>
+
+  <!-- Torch light overlay -->
+  <rect width="800" height="600" fill="url(#torchGlow1)"/>
+  <rect width="800" height="600" fill="url(#torchGlow2)"/>
+
+  <!-- Rune symbols carved into stones -->
+  <g fill="none" stroke="#4a6a8a" stroke-width="2" opacity="0.35">
+    <!-- Rune 1 -->
+    <g transform="translate(400, 320)">
+      <line x1="0" y1="-18" x2="0" y2="18"/>
+      <line x1="-10" y1="-12" x2="10" y2="-12"/>
+      <line x1="0" y1="-12" x2="10" y2="0"/>
+      <line x1="0" y1="0" x2="-10" y2="12"/>
+    </g>
+    <!-- Rune 2 -->
+    <g transform="translate(100, 150)">
+      <line x1="-8" y1="-15" x2="8" y2="-15"/>
+      <line x1="0" y1="-15" x2="0" y2="15"/>
+      <line x1="-8" y1="5" x2="8" y2="5"/>
+      <line x1="-8" y1="15" x2="8" y2="15"/>
+    </g>
+    <!-- Rune 3 -->
+    <g transform="translate(700, 310)">
+      <path d="M0 -15 L10 0 L0 15 L-10 0 Z"/>
+      <line x1="0" y1="-15" x2="0" y2="15"/>
+    </g>
+  </g>
+
+  <!-- Chains hanging -->
+  <g fill="#4a4640" stroke="#3a3632" stroke-width="1">
+    <g transform="translate(400, 0)">
+      <ellipse cx="0" cy="15" rx="6" ry="8" fill="none" stroke="#555" stroke-width="2.5"/>
+      <ellipse cx="0" cy="30" rx="5" ry="7" fill="none" stroke="#4a4640" stroke-width="2.5"/>
+      <ellipse cx="0" cy="44" rx="6" ry="8" fill="none" stroke="#555" stroke-width="2.5"/>
+      <ellipse cx="0" cy="58" rx="5" ry="7" fill="none" stroke="#4a4640" stroke-width="2.5"/>
+      <circle cx="0" cy="70" r="4" fill="#555"/>
+    </g>
+  </g>
+
+  <!-- Cobweb in corner -->
+  <g stroke="#888" stroke-width="0.8" fill="none" opacity="0.2">
+    <path d="M0 0 Q30 15 60 60"/>
+    <path d="M0 0 Q20 25 30 70"/>
+    <path d="M0 0 Q40 10 80 30"/>
+    <path d="M0 15 Q25 25 55 65" stroke-dasharray="3,4"/>
+    <path d="M15 0 Q30 20 50 50" stroke-dasharray="2,5"/>
+    <!-- Right corner -->
+    <path d="M800 0 Q770 15 740 60"/>
+    <path d="M800 0 Q780 25 770 70"/>
+    <path d="M800 0 Q760 10 720 30"/>
+    <path d="M800 15 Q775 25 745 65" stroke-dasharray="3,4"/>
+  </g>
+
+  <!-- Vignette overlay for atmosphere -->
+  <rect width="800" height="600" fill="url(#vignette)"/>
+
+  <!-- Subtle dark overlay at bottom for ground shadow -->
+  <rect x="0" y="500" width="800" height="100" fill="url(#vignette)" opacity="0.3"/>
+</svg>

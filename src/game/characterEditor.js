@@ -23,7 +23,7 @@ export function showCharacterEditor(modelUrl) {
 
   // Preview scene
   const scene = new Scene();
-  scene.background = new Color("#1a1a2e");
+  scene.background = new Color("#000000");
 
   const camera = new PerspectiveCamera(40, previewCanvas.width / previewCanvas.height, 0.1, 50);
   camera.position.set(0, 1.2, 4.5);
