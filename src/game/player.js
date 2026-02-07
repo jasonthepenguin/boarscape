@@ -19,7 +19,7 @@ import { PLAYER_DESIRED_HEIGHT } from "../config.js";
 /**
  * Creates a nametag sprite with the given name
  */
-function createNametag(name) {
+export function createNametag(name) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 

@@ -23,6 +23,5 @@ export function createEnvironment(scene, { fieldSize = FIELD_SIZE, treeCount = T
     boundsHalfSize: half,
     groundY: GROUND_Y,
     treeColliders: colliders,
-    update() {},
   };
 }
