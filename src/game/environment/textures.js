@@ -1,6 +1,5 @@
 import {
   CanvasTexture,
-  ClampToEdgeWrapping,
   RepeatWrapping,
   SRGBColorSpace,
 } from "three";
@@ -45,45 +44,6 @@ export function makeGrassTexture(rng) {
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
   texture.anisotropy = 8;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-export function makeCloudTexture(rng) {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, size, size);
-
-  // Soft blobs
-  for (let i = 0; i < 28; i++) {
-    const x = (0.18 + rng() * 0.64) * size;
-    const y = (0.22 + rng() * 0.56) * size;
-    const r = (0.10 + rng() * 0.18) * size;
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, "rgba(255,255,255,0.95)");
-    grad.addColorStop(1, "rgba(255,255,255,0.0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(x - r, y - r, r * 2, r * 2);
-  }
-
-  // Light noise for texture breakup
-  const image = ctx.getImageData(0, 0, size, size);
-  const d = image.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (rng() - 0.5) * 18;
-    d[i] = Math.min(255, Math.max(0, d[i] + n));
-    d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
-    d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
-  }
-  ctx.putImageData(image, 0, 0);
-
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.wrapS = ClampToEdgeWrapping;
-  texture.wrapT = ClampToEdgeWrapping;
   texture.needsUpdate = true;
   return texture;
 }

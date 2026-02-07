@@ -4,7 +4,6 @@ import {
   Clock,
   Color,
   DirectionalLight,
-  Fog,
   HemisphereLight,
   PerspectiveCamera,
   Scene,
@@ -13,8 +12,6 @@ import {
 } from "three";
 import {
   BG_COLOR,
-  FOG_NEAR,
-  FOG_FAR,
   MAX_DT,
   TONE_MAPPING_EXPOSURE,
   CAMERA_FOV,
@@ -39,7 +36,6 @@ import {
 export function createScene(canvas) {
   const scene = new Scene();
   scene.background = new Color(BG_COLOR);
-  scene.fog = new Fog(BG_COLOR, FOG_NEAR, FOG_FAR);
 
   const camera = new PerspectiveCamera(CAMERA_FOV, 1, CAMERA_NEAR, CAMERA_FAR);
   camera.position.set(0, 6, 10);

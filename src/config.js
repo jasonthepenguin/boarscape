@@ -8,23 +8,6 @@ export const GROUND_Y = 0;
 export const RNG_SEED = 42;
 
 // =============================================================================
-// Sky
-// =============================================================================
-export const SKY_ELEVATION = 18;
-export const SKY_AZIMUTH = 120;
-export const SKY_TURBIDITY = 8;
-export const SKY_RAYLEIGH = 2.2;
-export const SKY_MIE_COEFFICIENT = 0.004;
-export const SKY_MIE_DIRECTIONAL_G = 0.84;
-
-// =============================================================================
-// Clouds
-// =============================================================================
-export const CLOUD_COUNT = 34;
-export const CLOUD_LAYER_Y = 46;
-export const CLOUD_RANGE_FACTOR = 1.2;
-
-// =============================================================================
 // Player
 // =============================================================================
 export const PLAYER_DESIRED_HEIGHT = 2.1;
@@ -53,8 +36,6 @@ export const CAMERA_ROTATE_SPEED = 0.0042;
 // Scene
 // =============================================================================
 export const BG_COLOR = "#87cfff";
-export const FOG_NEAR = 40;
-export const FOG_FAR = 180;
 export const MAX_DT = 0.05;
 export const TONE_MAPPING_EXPOSURE = 1.22;
 
