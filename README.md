@@ -1,6 +1,6 @@
 # Boarscape
 
-Small Three.js third‑person playground using the included `mesh-1769779998.glb` as the player.
+Small Three.js third‑person playground using the included `boar3.glb` as the player.
 
 ## Run
 

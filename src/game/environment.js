@@ -21,6 +21,19 @@ import {
 } from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 
+// Seeded PRNG (mulberry32) for deterministic world generation
+function createRng(seed) {
+  let s = seed | 0;
+  return function () {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const random = createRng(42);
+
 function makeGrassTexture() {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -33,22 +46,22 @@ function makeGrassTexture() {
 
   // Speckle + blades
   for (let i = 0; i < 9000; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const g = 110 + Math.random() * 70;
-    const a = 0.08 + Math.random() * 0.12;
+    const x = random() * size;
+    const y = random() * size;
+    const g = 110 + random() * 70;
+    const a = 0.08 + random() * 0.12;
     ctx.fillStyle = `rgba(0, ${g | 0}, 0, ${a})`;
     ctx.fillRect(x, y, 1, 1);
   }
 
   for (let i = 0; i < 1400; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const len = 4 + Math.random() * 10;
-    const angle = (-Math.PI / 2) + (Math.random() - 0.5) * 0.6;
+    const x = random() * size;
+    const y = random() * size;
+    const len = 4 + random() * 10;
+    const angle = (-Math.PI / 2) + (random() - 0.5) * 0.6;
     const x2 = x + Math.cos(angle) * len;
     const y2 = y + Math.sin(angle) * len;
-    ctx.strokeStyle = `rgba(30, 120, 20, ${0.10 + Math.random() * 0.10})`;
+    ctx.strokeStyle = `rgba(30, 120, 20, ${0.10 + random() * 0.10})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -75,9 +88,9 @@ function makeCloudTexture() {
 
   // Soft blobs
   for (let i = 0; i < 28; i++) {
-    const x = (0.18 + Math.random() * 0.64) * size;
-    const y = (0.22 + Math.random() * 0.56) * size;
-    const r = (0.10 + Math.random() * 0.18) * size;
+    const x = (0.18 + random() * 0.64) * size;
+    const y = (0.22 + random() * 0.56) * size;
+    const r = (0.10 + random() * 0.18) * size;
     const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
     grad.addColorStop(0, "rgba(255,255,255,0.95)");
     grad.addColorStop(1, "rgba(255,255,255,0.0)");
@@ -89,7 +102,7 @@ function makeCloudTexture() {
   const image = ctx.getImageData(0, 0, size, size);
   const d = image.data;
   for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 18;
+    const n = (random() - 0.5) * 18;
     d[i] = Math.min(255, Math.max(0, d[i] + n));
     d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
     d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
@@ -151,9 +164,9 @@ export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = 
     const color = new Color(baseHex);
     const hsl = { h: 0, s: 0, l: 0 };
     color.getHSL(hsl);
-    hsl.h += (Math.random() - 0.5) * hueVar;
-    hsl.s = Math.max(0, Math.min(1, hsl.s + (Math.random() - 0.5) * satVar));
-    hsl.l = Math.max(0, Math.min(1, hsl.l + (Math.random() - 0.5) * lightVar));
+    hsl.h += (random() - 0.5) * hueVar;
+    hsl.s = Math.max(0, Math.min(1, hsl.s + (random() - 0.5) * satVar));
+    hsl.l = Math.max(0, Math.min(1, hsl.l + (random() - 0.5) * lightVar));
     return new Color().setHSL(hsl.h, hsl.s, hsl.l);
   };
 
@@ -191,14 +204,14 @@ export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = 
   for (let i = 0; i < pineCount; i++) {
     let x = 0, z = 0;
     for (let tries = 0; tries < 50; tries++) {
-      x = (Math.random() * 2 - 1) * (half - 6);
-      z = (Math.random() * 2 - 1) * (half - 6);
+      x = (random() * 2 - 1) * (half - 6);
+      z = (random() * 2 - 1) * (half - 6);
       if (x * x + z * z > spawnAvoidRadius * spawnAvoidRadius) break;
     }
 
-    const scale = 0.7 + Math.random() * 0.8;
-    const height = 3.5 + Math.random() * 2.5;
-    const rotY = Math.random() * Math.PI * 2;
+    const scale = 0.7 + random() * 0.8;
+    const height = 3.5 + random() * 2.5;
+    const rotY = random() * Math.PI * 2;
     tmpQuat.setFromAxisAngle(yAxis, rotY);
 
     // Trunk
@@ -264,14 +277,14 @@ export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = 
   for (let i = 0; i < roundCount; i++) {
     let x = 0, z = 0;
     for (let tries = 0; tries < 50; tries++) {
-      x = (Math.random() * 2 - 1) * (half - 6);
-      z = (Math.random() * 2 - 1) * (half - 6);
+      x = (random() * 2 - 1) * (half - 6);
+      z = (random() * 2 - 1) * (half - 6);
       if (x * x + z * z > spawnAvoidRadius * spawnAvoidRadius) break;
     }
 
-    const scale = 0.8 + Math.random() * 0.7;
-    const trunkHeight = 1.8 + Math.random() * 1.5;
-    const rotY = Math.random() * Math.PI * 2;
+    const scale = 0.8 + random() * 0.7;
+    const trunkHeight = 1.8 + random() * 1.5;
+    const rotY = random() * Math.PI * 2;
     tmpQuat.setFromAxisAngle(yAxis, rotY);
 
     // Trunk
@@ -282,9 +295,9 @@ export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = 
     roundTrunks.setColorAt(i, varyColor(trunkColors[(i + 2) % trunkColors.length], 0.02, 0.1, 0.15));
 
     // Canopy (squashed sphere)
-    const canopyScale = scale * (1.3 + Math.random() * 0.5);
+    const canopyScale = scale * (1.3 + random() * 0.5);
     tmpPos.set(x, trunkHeight + canopyScale * 0.6, z);
-    tmpScale.set(canopyScale, canopyScale * (0.7 + Math.random() * 0.3), canopyScale);
+    tmpScale.set(canopyScale, canopyScale * (0.7 + random() * 0.3), canopyScale);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
     roundCanopies.setMatrixAt(i, tmpMatrix);
     roundCanopies.setColorAt(i, varyColor(leafColors[(i + 3) % leafColors.length], 0.1, 0.25, 0.15));
@@ -320,14 +333,14 @@ export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = 
   for (let i = 0; i < slimCount; i++) {
     let x = 0, z = 0;
     for (let tries = 0; tries < 50; tries++) {
-      x = (Math.random() * 2 - 1) * (half - 6);
-      z = (Math.random() * 2 - 1) * (half - 6);
+      x = (random() * 2 - 1) * (half - 6);
+      z = (random() * 2 - 1) * (half - 6);
       if (x * x + z * z > spawnAvoidRadius * spawnAvoidRadius) break;
     }
 
-    const scale = 0.6 + Math.random() * 0.5;
-    const trunkHeight = 3.5 + Math.random() * 2.0;
-    const rotY = Math.random() * Math.PI * 2;
+    const scale = 0.6 + random() * 0.5;
+    const trunkHeight = 3.5 + random() * 2.0;
+    const rotY = random() * Math.PI * 2;
     tmpQuat.setFromAxisAngle(yAxis, rotY);
 
     // Tall slim trunk
@@ -338,8 +351,8 @@ export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = 
     slimTrunks.setColorAt(i, varyColor(lightTrunkColors[i % lightTrunkColors.length], 0.02, 0.08, 0.1));
 
     // Smaller, elongated canopy
-    const canopyWidth = scale * (0.8 + Math.random() * 0.4);
-    const canopyHeight = scale * (1.2 + Math.random() * 0.6);
+    const canopyWidth = scale * (0.8 + random() * 0.4);
+    const canopyHeight = scale * (1.2 + random() * 0.6);
     tmpPos.set(x, trunkHeight + canopyHeight * 0.4, z);
     tmpScale.set(canopyWidth, canopyHeight, canopyWidth);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
@@ -373,22 +386,22 @@ export function createEnvironment(scene, { fieldSize = 120, treeCount = 500 } = 
       new SpriteMaterial({
         map: cloudTex,
         transparent: true,
-        opacity: 0.55 + Math.random() * 0.32,
+        opacity: 0.55 + random() * 0.32,
         depthWrite: false,
       }),
     );
-    const w = 24 + Math.random() * 46;
-    sprite.scale.set(w, w * (0.55 + Math.random() * 0.25), 1);
+    const w = 24 + random() * 46;
+    sprite.scale.set(w, w * (0.55 + random() * 0.25), 1);
     sprite.position.set(
-      (Math.random() * 2 - 1) * cloudRange,
-      cloudLayerY + Math.random() * 16,
-      (Math.random() * 2 - 1) * cloudRange,
+      (random() * 2 - 1) * cloudRange,
+      cloudLayerY + random() * 16,
+      (random() * 2 - 1) * cloudRange,
     );
     sprite.renderOrder = 10;
     scene.add(sprite);
     clouds.push({
       sprite,
-      speed: 0.5 + Math.random() * 1.2,
+      speed: 0.5 + random() * 1.2,
     });
   }
 
