@@ -4,69 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Boarscape</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div id="app">
-      <!-- Main Menu -->
-      <div id="menu">
-        <div id="menu-title">BoarScape</div>
-        <div id="menu-box">
-          <label id="menu-label" for="name-input">Enter your name</label>
-          <input id="name-input" type="text" maxlength="16" placeholder="Player" autocomplete="off" />
-          <button id="play-btn">Play</button>
-        </div>
-      </div>
-
-      <!-- Character Editor -->
-      <div id="character-editor" style="display: none">
-        <div id="editor-title">Customize Your Boar</div>
-        <div id="editor-box">
-          <canvas id="preview-canvas"></canvas>
-          <div id="color-swatches"></div>
-          <button id="editor-play-btn">Play</button>
-        </div>
-      </div>
-
-      <canvas id="game" style="display: none"></canvas>
-
-      <div id="hud" style="display: none">
-        <div id="loading" class="panel">Loading…</div>
-
-        <!-- Game Title -->
-        <div id="game-title">BoarScape</div>
-
-        <!-- Bottom Bars -->
-        <div id="bars-container">
-          <div class="stat-bar" id="health-bar">
-            <div class="bar-icon">♥</div>
-            <div class="bar-track">
-              <div class="bar-fill health-fill" style="width: 100%"></div>
-              <div class="bar-text">100 / 100</div>
-            </div>
-          </div>
-          <div class="stat-bar" id="xp-bar">
-            <div class="bar-icon">★</div>
-            <div class="bar-track">
-              <div class="bar-fill xp-fill" style="width: 35%"></div>
-              <div class="bar-text">350 / 1000 XP</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="help" class="panel">
-          <div class="title">Controls</div>
-          <div><span class="key">WASD</span> Move</div>
-          <div><span class="key">Shift</span> Run</div>
-          <div><span class="key">Space</span> Jump</div>
-          <div><span class="key">Mouse drag</span> Rotate camera</div>
-          <div><span class="key">Wheel</span> Zoom</div>
-        </div>
-      </div>
-    </div>
-
+    <canvas id="game" style="display: none"></canvas>
+    <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

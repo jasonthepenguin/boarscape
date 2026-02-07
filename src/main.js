@@ -1,46 +1,53 @@
 import "./style.css";
 
-import { setupMenu, getGameDOM } from "./game/menu.js";
+import { mount } from "svelte";
+import App from "./App.svelte";
+import { loading } from "./ui/stores.svelte.js";
 import { createScene } from "./game/scene.js";
 import { createEnvironment } from "./game/environment/index.js";
 import { InputManager } from "./game/input.js";
 import { loadPlayer } from "./game/player.js";
-import { showCharacterEditor } from "./game/characterEditor.js";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
 
-setupMenu(async (playerName) => {
-  // Character editor — pick a color with 3D preview
-  const { color } = await showCharacterEditor(modelUrl);
+mount(App, {
+  target: document.getElementById("app"),
+  props: {
+    modelUrl,
+    onstart: startGame,
+  },
+});
 
-  // Transition to game
-  const { canvas, showLoading, hideLoading, showGame } = getGameDOM();
-  showGame();
+function startGame({ name, color }) {
+  const canvas = document.getElementById("game");
+  canvas.style.display = "block";
 
   const { scene, camera, start } = createScene(canvas);
 
-  showLoading("Loading world...");
+  loading.text = "Loading world...";
   const env = createEnvironment(scene);
-  hideLoading();
+  loading.text = null;
 
   const input = new InputManager(canvas);
 
   let player = null;
-  showLoading("Loading player...");
+  loading.text = "Loading player...";
 
   loadPlayer(scene, camera, input, env, {
     modelUrl,
-    playerName,
+    playerName: name,
     color,
-    onProgress: (pct) => showLoading(`Loading player... ${pct}%`),
+    onProgress: (pct) => {
+      loading.text = `Loading player... ${pct}%`;
+    },
   })
     .then((result) => {
       player = result;
-      hideLoading();
+      loading.text = null;
     })
     .catch((err) => {
       console.error(err);
-      showLoading("Failed to load player model. Check console.");
+      loading.text = "Failed to load player model. Check console.";
     });
 
   start((dt) => {
@@ -48,4 +55,4 @@ setupMenu(async (playerName) => {
     if (player?.controller) player.controller.update(dt);
     if (player?.mixer) player.mixer.update(dt);
   });
-});
+}
