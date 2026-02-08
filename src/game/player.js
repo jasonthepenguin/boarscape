@@ -1,4 +1,5 @@
 import {
+  AdditiveBlending,
   AnimationMixer,
   Box3,
   CanvasTexture,
@@ -6,11 +7,14 @@ import {
   Group,
   LoopOnce,
   LoopRepeat,
+  Mesh,
   MeshBasicMaterial,
+  SphereGeometry,
   Sprite,
   SpriteMaterial,
   Vector3,
 } from "three";
+import { LEVEL_UP_GLOW_DURATION } from "../config.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { ThirdPersonController } from "./thirdPersonController.js";
@@ -245,4 +249,50 @@ export function loadPlayer(scene, camera, input, environment, options = {}) {
       }
     );
   });
+}
+
+/**
+ * Creates a temporary golden glow aura around the player on level up.
+ * Returns { mesh, update(dt) } — call update each frame. Auto-removes when done.
+ */
+export function createLevelUpAura(playerRoot) {
+  const geo = new SphereGeometry(1.5, 24, 16);
+  const mat = new MeshBasicMaterial({
+    color: 0xffd700,
+    transparent: true,
+    opacity: 0.35,
+    blending: AdditiveBlending,
+    depthWrite: false,
+  });
+  const mesh = new Mesh(geo, mat);
+  mesh.position.y = 1.0;
+  playerRoot.add(mesh);
+
+  let elapsed = 0;
+  let done = false;
+
+  return {
+    mesh,
+    get done() { return done; },
+    update(dt) {
+      if (done) return;
+      elapsed += dt;
+
+      const progress = elapsed / LEVEL_UP_GLOW_DURATION;
+      if (progress >= 1) {
+        playerRoot.remove(mesh);
+        geo.dispose();
+        mat.dispose();
+        done = true;
+        return;
+      }
+
+      // Scale pulse
+      const pulse = 1.0 + 0.2 * Math.sin(elapsed * 4);
+      mesh.scale.setScalar(pulse);
+
+      // Fade out
+      mat.opacity = 0.35 * (1 - progress);
+    },
+  };
 }

@@ -111,6 +111,7 @@ wss.on("connection", (ws) => {
         broadcast({
           type: "npcDied",
           npcId: npc.id,
+          killerId: playerId,
         });
       }
     }

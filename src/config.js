@@ -99,6 +99,14 @@ export const SELECTION_RING_TUBE = 0.03;
 export const ACTION_BAR_SLOTS = 5;
 
 // =============================================================================
+// XP / Leveling
+// =============================================================================
+export const XP_PER_KILL = 500;
+export const XP_BASE_THRESHOLD = 1000;
+export const XP_THRESHOLD_INCREMENT = 100;
+export const LEVEL_UP_GLOW_DURATION = 3.0;
+
+// =============================================================================
 // Boar color presets
 // =============================================================================
 export const BOAR_COLOR_PRESETS = [

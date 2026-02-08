@@ -24,3 +24,20 @@ export const actionBar = {
   get selectedNpcId() { return _selectedNpcId; },
   set selectedNpcId(v) { _selectedNpcId = v; },
 };
+
+// Player stats (XP / leveling)
+let _xp = $state(0);
+let _level = $state(1);
+let _xpForNextLevel = $state(1000);
+let _xpIntoCurrentLevel = $state(0);
+
+export const playerStats = {
+  get xp() { return _xp; },
+  set xp(v) { _xp = v; },
+  get level() { return _level; },
+  set level(v) { _level = v; },
+  get xpForNextLevel() { return _xpForNextLevel; },
+  set xpForNextLevel(v) { _xpForNextLevel = v; },
+  get xpIntoCurrentLevel() { return _xpIntoCurrentLevel; },
+  set xpIntoCurrentLevel(v) { _xpIntoCurrentLevel = v; },
+};

@@ -1,5 +1,5 @@
 <script>
-  import { loading, actionBar } from "./stores.svelte.js";
+  import { loading, actionBar, playerStats } from "./stores.svelte.js";
 
   let cooldownPct = $derived(
     actionBar.cooldownTotal > 0
@@ -7,6 +7,11 @@
       : 0
   );
   let canAttack = $derived(actionBar.cooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
+  let xpPct = $derived(
+    playerStats.xpForNextLevel > 0
+      ? (playerStats.xpIntoCurrentLevel / playerStats.xpForNextLevel) * 100
+      : 0
+  );
 </script>
 
 <div class="hud">
@@ -14,7 +19,10 @@
     <div class="panel loading">{loading.text}</div>
   {/if}
 
-  <div class="game-title">BoarScape</div>
+  <div class="title-row">
+    <div class="game-title">BoarScape</div>
+    <div class="level-badge">{playerStats.level}</div>
+  </div>
 
   <div class="action-bar">
     <div class="action-slot active" class:ready={canAttack}>
@@ -42,8 +50,8 @@
     <div class="stat-bar xp-bar">
       <div class="bar-icon">&#9733;</div>
       <div class="bar-track">
-        <div class="bar-fill xp-fill" style:width="35%"></div>
-        <div class="bar-text">350 / 1000 XP</div>
+        <div class="bar-fill xp-fill" style:width="{xpPct}%"></div>
+        <div class="bar-text">{playerStats.xpIntoCurrentLevel} / {playerStats.xpForNextLevel} XP</div>
       </div>
     </div>
   </div>
@@ -68,10 +76,16 @@
     z-index: 10;
   }
 
-  .game-title {
+  .title-row {
     position: absolute;
     top: 16px;
     left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .game-title {
     font-family: "MedievalSharp", cursive;
     font-size: 42px;
     color: var(--rs-gold);
@@ -81,6 +95,26 @@
       4px 4px 8px rgba(0, 0, 0, 0.8),
       0 0 20px rgba(255, 215, 0, 0.3);
     letter-spacing: 2px;
+    user-select: none;
+  }
+
+  .level-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, var(--rs-brown-light) 0%, var(--rs-brown) 100%);
+    border: 2px solid var(--rs-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "MedievalSharp", cursive;
+    font-size: 20px;
+    color: var(--rs-gold);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 2px 6px rgba(0, 0, 0, 0.6),
+      0 0 10px rgba(255, 215, 0, 0.2);
     user-select: none;
   }
 

@@ -2,15 +2,15 @@ import "./style.css";
 
 import { mount } from "svelte";
 import App from "./App.svelte";
-import { loading, actionBar } from "./ui/stores.svelte.js";
+import { loading, actionBar, playerStats } from "./ui/stores.svelte.js";
 import { createScene } from "./game/scene.js";
 import { createEnvironment } from "./game/environment/index.js";
 import { InputManager } from "./game/input.js";
-import { loadPlayer } from "./game/player.js";
+import { loadPlayer, createLevelUpAura } from "./game/player.js";
 import { RemotePlayerManager } from "./game/remotePlayers.js";
 import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
-import { ATTACK_COOLDOWN, ATTACK_RANGE } from "./config.js";
+import { ATTACK_COOLDOWN, ATTACK_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
 import { Raycaster, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
@@ -42,6 +42,38 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const raycaster = new Raycaster();
   const pointerNdc = new Vector2();
   let attackCooldown = 0;
+  let levelUpAura = null;
+
+  // XP / leveling helpers
+  function cumulativeXpForLevel(level) {
+    // Level 1 = 0 XP, level 2 = 1000, level 3 = 2100, etc.
+    if (level <= 1) return 0;
+    const n = level - 1;
+    return n * XP_BASE_THRESHOLD + (n * (n - 1) / 2) * XP_THRESHOLD_INCREMENT;
+  }
+
+  function addXp(amount) {
+    const oldLevel = playerStats.level;
+    playerStats.xp += amount;
+
+    // Recalculate level
+    let lvl = oldLevel;
+    while (playerStats.xp >= cumulativeXpForLevel(lvl + 1)) {
+      lvl++;
+    }
+    playerStats.level = lvl;
+
+    // Update bar progress
+    const xpAtCurrentLevel = cumulativeXpForLevel(lvl);
+    const xpAtNextLevel = cumulativeXpForLevel(lvl + 1);
+    playerStats.xpIntoCurrentLevel = playerStats.xp - xpAtCurrentLevel;
+    playerStats.xpForNextLevel = xpAtNextLevel - xpAtCurrentLevel;
+
+    // Level up glow
+    if (lvl > oldLevel && player?.root) {
+      levelUpAura = createLevelUpAura(player.root);
+    }
+  }
 
   // Spawn existing players that were already on the server
   for (const p of existingPlayers) {
@@ -87,6 +119,9 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   };
   network.onNpcDied = (msg) => {
     npcManager.killNpc(msg.npcId);
+    if (msg.killerId === network.playerId) {
+      addXp(XP_PER_KILL);
+    }
   };
   network.onNpcRemoved = (msg) => {
     npcManager.removeNpc(msg.npcId);
@@ -163,6 +198,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     remotePlayers.update(dt);
     npcManager.update(dt);
     phoneProjectiles.update(dt);
+    if (levelUpAura && !levelUpAura.done) levelUpAura.update(dt);
 
     // Attack cooldown
     if (attackCooldown > 0) {
