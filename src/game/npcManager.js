@@ -28,29 +28,34 @@ function createHumanoidModel(shirtColorHex) {
   const pantsMat = new MeshStandardMaterial({ color: "#3a3a50", roughness: 0.9 });
   const shoeMat = new MeshStandardMaterial({ color: "#2a1a0a", roughness: 1 });
 
+  // Body offset group — shifts model down so shoe bottoms rest on y=0
+  const body = new Group();
+  body.position.y = -0.33;
+  root.add(body);
+
   // Head
   const head = new Mesh(new SphereGeometry(0.18, 8, 6), skinMat);
   head.position.y = 1.45;
   head.castShadow = true;
-  root.add(head);
+  body.add(head);
 
   // Body/torso
   const torso = new Mesh(new BoxGeometry(0.4, 0.5, 0.22), shirtMat);
   torso.position.y = 1.05;
   torso.castShadow = true;
-  root.add(torso);
+  body.add(torso);
 
   // Left arm
   const leftArm = new Mesh(new BoxGeometry(0.12, 0.45, 0.12), skinMat);
   leftArm.position.set(-0.26, 1.0, 0);
   leftArm.castShadow = true;
-  root.add(leftArm);
+  body.add(leftArm);
 
   // Right arm
   const rightArm = new Mesh(new BoxGeometry(0.12, 0.45, 0.12), skinMat);
   rightArm.position.set(0.26, 1.0, 0);
   rightArm.castShadow = true;
-  root.add(rightArm);
+  body.add(rightArm);
 
   // Left leg
   const leftLeg = new Group();
@@ -63,7 +68,7 @@ function createHumanoidModel(shirtColorHex) {
   leftShoe.castShadow = true;
   leftLeg.add(leftShoe);
   leftLeg.position.set(-0.1, 0.8, 0);
-  root.add(leftLeg);
+  body.add(leftLeg);
 
   // Right leg
   const rightLeg = new Group();
@@ -76,7 +81,7 @@ function createHumanoidModel(shirtColorHex) {
   rightShoe.castShadow = true;
   rightLeg.add(rightShoe);
   rightLeg.position.set(0.1, 0.8, 0);
-  root.add(rightLeg);
+  body.add(rightLeg);
 
   return { root, leftLeg, rightLeg, leftArm, rightArm };
 }
