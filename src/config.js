@@ -81,6 +81,26 @@ export const NPC_WALK_SPEED = 2.5;
 // =============================================================================
 // Boar color presets
 // =============================================================================
+// =============================================================================
+// Attack / Phone throw
+// =============================================================================
+export const ATTACK_COOLDOWN = 2.0;
+export const ATTACK_RANGE = 8;
+export const PHONE_FLIGHT_TIME = 0.5;
+export const PHONE_ARC_HEIGHT = 3.0;
+export const PHONE_WIDTH = 0.08;
+export const PHONE_HEIGHT = 0.16;
+export const PHONE_DEPTH = 0.01;
+export const NPC_MAX_ADDICTION = 3;
+export const NPC_DEATH_ANIM_DURATION = 2.0;
+export const NPC_DESPAWN_DELAY = 15.0;
+export const SELECTION_RING_RADIUS = 0.5;
+export const SELECTION_RING_TUBE = 0.03;
+export const ACTION_BAR_SLOTS = 5;
+
+// =============================================================================
+// Boar color presets
+// =============================================================================
 export const BOAR_COLOR_PRESETS = [
   { name: "Natural", hex: "#ffffff" },
   { name: "Dark Brown", hex: "#6b3a2a" },

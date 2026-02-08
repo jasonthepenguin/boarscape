@@ -1,5 +1,12 @@
 <script>
-  import { loading } from "./stores.svelte.js";
+  import { loading, actionBar } from "./stores.svelte.js";
+
+  let cooldownPct = $derived(
+    actionBar.cooldownTotal > 0
+      ? (actionBar.cooldownRemaining / actionBar.cooldownTotal) * 100
+      : 0
+  );
+  let canAttack = $derived(actionBar.cooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
 </script>
 
 <div class="hud">
@@ -8,6 +15,21 @@
   {/if}
 
   <div class="game-title">BoarScape</div>
+
+  <div class="action-bar">
+    <div class="action-slot active" class:ready={canAttack}>
+      <div class="slot-key">F</div>
+      <div class="slot-icon">📱</div>
+      {#if cooldownPct > 0}
+        <div class="cooldown-overlay" style:height="{cooldownPct}%"></div>
+      {/if}
+    </div>
+    {#each Array(4) as _, i}
+      <div class="action-slot locked">
+        <div class="slot-key">{i + 2}</div>
+      </div>
+    {/each}
+  </div>
 
   <div class="bars-container">
     <div class="stat-bar health-bar">
@@ -33,6 +55,8 @@
     <div><span class="key">Space</span> Jump</div>
     <div><span class="key">Mouse drag</span> Rotate camera</div>
     <div><span class="key">Wheel</span> Zoom</div>
+    <div><span class="key">Click</span> Select NPC</div>
+    <div><span class="key">F</span> Throw phone</div>
   </div>
 </div>
 
@@ -60,6 +84,73 @@
     user-select: none;
   }
 
+  /* ===== Action Bar ===== */
+  .action-bar {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+  }
+
+  .action-slot {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(180deg, var(--rs-brown-light) 0%, var(--rs-brown) 100%);
+    border: 2px solid var(--rs-border);
+    border-radius: 6px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 2px 4px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+
+  .action-slot.active {
+    border-color: var(--rs-gold-dark);
+  }
+
+  .action-slot.active.ready {
+    border-color: var(--rs-gold);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 2px 4px rgba(0, 0, 0, 0.5),
+      0 0 8px rgba(255, 215, 0, 0.3);
+  }
+
+  .action-slot.locked {
+    opacity: 0.4;
+  }
+
+  .slot-key {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-family: "MedievalSharp", cursive;
+    font-size: 10px;
+    color: var(--rs-gold);
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  .slot-icon {
+    font-size: 22px;
+    filter: grayscale(0.2);
+  }
+
+  .cooldown-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+  }
+
+  /* ===== Bars ===== */
   .bars-container {
     position: absolute;
     bottom: 20px;

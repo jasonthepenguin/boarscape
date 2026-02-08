@@ -1,5 +1,5 @@
 import { WebSocketServer } from "ws";
-import { createNpcs, updateNpcs, serializeNpcs } from "./npcs.js";
+import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn } from "./npcs.js";
 
 const PORT = 3001;
 const MAX_PLAYERS = 30;
@@ -85,6 +85,35 @@ wss.on("connection", (ws) => {
         player.anim = msg.anim;
       }
     }
+
+    if (msg.type === "attack" && playerId) {
+      const npc = npcs.find(n => n.id === msg.npcId);
+      if (!npc) return;
+
+      const player = players.get(playerId);
+      if (!player) return;
+
+      const result = hitNpc(npc);
+      if (!result) return;
+
+      // Broadcast hit to ALL clients so everyone sees the phone + addiction update
+      broadcast({
+        type: "npcHit",
+        npcId: npc.id,
+        addiction: npc.addiction,
+        attackerId: playerId,
+        attackerX: player.x,
+        attackerY: player.y,
+        attackerZ: player.z,
+      });
+
+      if (result.died) {
+        broadcast({
+          type: "npcDied",
+          npcId: npc.id,
+        });
+      }
+    }
   });
 
   ws.on("close", () => {
@@ -112,6 +141,16 @@ function broadcast(msg, excludeId = null) {
 const tickDt = 1 / TICK_RATE;
 setInterval(() => {
   updateNpcs(npcs, tickDt);
+
+  // Check for NPCs that should despawn
+  for (let i = npcs.length - 1; i >= 0; i--) {
+    if (shouldDespawn(npcs[i])) {
+      const removed = npcs[i];
+      broadcast({ type: "npcRemoved", npcId: removed.id });
+      npcs.splice(i, 1);
+      console.log(`NPC "${removed.name}" despawned after death.`);
+    }
+  }
 
   if (players.size === 0) return;
 

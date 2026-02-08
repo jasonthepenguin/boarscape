@@ -3,6 +3,7 @@ export class InputManager {
     this.domElement = domElement;
     this._keysDown = new Set();
     this._jumpPressed = false;
+    this._attackPressed = false;
 
     // Pointer drag state
     this._dragging = false;
@@ -12,6 +13,12 @@ export class InputManager {
     this._pointerDx = 0;
     this._pointerDy = 0;
 
+    // Click detection (distinguish from drag)
+    this._pointerStartX = 0;
+    this._pointerStartY = 0;
+    this._didDrag = false;
+    this._clickEvent = null;
+
     // Wheel accumulator
     this._wheelDelta = 0;
 
@@ -20,6 +27,9 @@ export class InputManager {
       this._keysDown.add(e.code);
       if (e.code === "Space" && !e.repeat) {
         this._jumpPressed = true;
+      }
+      if (e.code === "KeyF" && !e.repeat) {
+        this._attackPressed = true;
       }
     };
 
@@ -33,6 +43,9 @@ export class InputManager {
       this._pointerId = e.pointerId;
       this._lastPointerX = e.clientX;
       this._lastPointerY = e.clientY;
+      this._pointerStartX = e.clientX;
+      this._pointerStartY = e.clientY;
+      this._didDrag = false;
       domElement.setPointerCapture?.(e.pointerId);
       domElement.classList.add("dragging");
     };
@@ -44,10 +57,23 @@ export class InputManager {
       this._pointerDy += e.clientY - this._lastPointerY;
       this._lastPointerX = e.clientX;
       this._lastPointerY = e.clientY;
+
+      // Check if movement exceeds click threshold
+      if (!this._didDrag) {
+        const ddx = e.clientX - this._pointerStartX;
+        const ddy = e.clientY - this._pointerStartY;
+        if (ddx * ddx + ddy * ddy > 16) {
+          this._didDrag = true;
+        }
+      }
     };
 
     this._onPointerUp = (e) => {
       if (this._pointerId != null && e.pointerId !== this._pointerId) return;
+      // If pointer barely moved, treat as a click
+      if (!this._didDrag) {
+        this._clickEvent = { clientX: e.clientX, clientY: e.clientY };
+      }
       this._dragging = false;
       this._pointerId = null;
       domElement.classList.remove("dragging");
@@ -81,6 +107,20 @@ export class InputManager {
       return true;
     }
     return false;
+  }
+
+  wasAttackPressed() {
+    if (this._attackPressed) {
+      this._attackPressed = false;
+      return true;
+    }
+    return false;
+  }
+
+  consumeClick() {
+    const click = this._clickEvent;
+    this._clickEvent = null;
+    return click;
   }
 
   consumePointerDelta() {

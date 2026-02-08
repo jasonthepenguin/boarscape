@@ -7,6 +7,9 @@ export class NetworkManager {
     this.onPlayerLeft = null;
     this.onPositions = null;
     this.onNpcPositions = null;
+    this.onNpcHit = null;
+    this.onNpcDied = null;
+    this.onNpcRemoved = null;
   }
 
   connect(name, color) {
@@ -32,6 +35,12 @@ export class NetworkManager {
         } else if (msg.type === "positions") {
           this.onPositions?.(msg.players);
           if (msg.npcs) this.onNpcPositions?.(msg.npcs);
+        } else if (msg.type === "npcHit") {
+          this.onNpcHit?.(msg);
+        } else if (msg.type === "npcDied") {
+          this.onNpcDied?.(msg);
+        } else if (msg.type === "npcRemoved") {
+          this.onNpcRemoved?.(msg);
         }
       };
 
@@ -43,6 +52,12 @@ export class NetworkManager {
   sendState(x, y, z, ry, anim) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: "state", x, y, z, ry, anim }));
+    }
+  }
+
+  sendAttack(npcId) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "attack", npcId }));
     }
   }
 
