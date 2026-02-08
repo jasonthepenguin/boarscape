@@ -94,6 +94,7 @@ export const PHONE_DEPTH = 0.01;
 export const NPC_MAX_ADDICTION = 3;
 export const NPC_DEATH_ANIM_DURATION = 2.0;
 export const NPC_DESPAWN_DELAY = 15.0;
+export const NPC_RESPAWN_DELAY = 10.0;
 export const SELECTION_RING_RADIUS = 0.5;
 export const SELECTION_RING_TUBE = 0.03;
 export const ACTION_BAR_SLOTS = 5;

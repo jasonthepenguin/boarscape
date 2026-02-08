@@ -10,6 +10,7 @@ export class NetworkManager {
     this.onNpcHit = null;
     this.onNpcDied = null;
     this.onNpcRemoved = null;
+    this.onNpcSpawned = null;
   }
 
   connect(name, color) {
@@ -41,6 +42,8 @@ export class NetworkManager {
           this.onNpcDied?.(msg);
         } else if (msg.type === "npcRemoved") {
           this.onNpcRemoved?.(msg);
+        } else if (msg.type === "npcSpawned") {
+          this.onNpcSpawned?.(msg);
         }
       };
 

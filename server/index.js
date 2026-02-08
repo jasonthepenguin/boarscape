@@ -1,5 +1,6 @@
 import { WebSocketServer } from "ws";
-import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn } from "./npcs.js";
+import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc } from "./npcs.js";
+import { NPC_RESPAWN_DELAY } from "../src/config.js";
 
 const PORT = 3001;
 const MAX_PLAYERS = 30;
@@ -9,6 +10,8 @@ const wss = new WebSocketServer({ port: PORT });
 const players = new Map();
 const npcs = createNpcs();
 let nextId = 1;
+let nextNpcIndex = npcs.length;
+const respawnQueue = []; // { timer, index }
 
 wss.on("connection", (ws) => {
   let playerId = null;
@@ -149,7 +152,23 @@ setInterval(() => {
       const removed = npcs[i];
       broadcast({ type: "npcRemoved", npcId: removed.id });
       npcs.splice(i, 1);
-      console.log(`NPC "${removed.name}" despawned after death.`);
+      respawnQueue.push({ timer: NPC_RESPAWN_DELAY, name: removed.name, id: removed.id });
+      console.log(`NPC "${removed.name}" despawned after death. Respawning in ${NPC_RESPAWN_DELAY}s.`);
+    }
+  }
+
+  // Process respawn queue
+  for (let i = respawnQueue.length - 1; i >= 0; i--) {
+    respawnQueue[i].timer -= tickDt;
+    if (respawnQueue[i].timer <= 0) {
+      const entry = respawnQueue[i];
+      respawnQueue.splice(i, 1);
+      const npc = createNpc(nextNpcIndex++);
+      npc.id = entry.id;
+      npc.name = entry.name;
+      npcs.push(npc);
+      broadcast({ type: "npcSpawned", npc: { id: npc.id, name: npc.name, x: npc.x, y: npc.y, z: npc.z, ry: npc.ry, anim: npc.anim, addiction: npc.addiction } });
+      console.log(`NPC "${npc.name}" spawned. ${npcs.length} NPCs active.`);
     }
   }
 

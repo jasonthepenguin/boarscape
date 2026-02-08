@@ -7,7 +7,7 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
-function createNpc(index) {
+export function createNpc(index) {
   // Spread NPCs in a ring around spawn
   const angle = (index / NPC_COUNT) * Math.PI * 2;
   const dist = 15 + Math.random() * 20;

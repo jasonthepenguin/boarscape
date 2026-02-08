@@ -129,6 +129,9 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       actionBar.selectedNpcId = null;
     }
   };
+  network.onNpcSpawned = (msg) => {
+    npcManager.addNpc(msg.npc.id, msg.npc.name);
+  };
 
   // NPC selection via click
   function handleClick(clickEvent) {
