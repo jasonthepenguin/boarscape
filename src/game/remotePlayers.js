@@ -153,7 +153,12 @@ export class RemotePlayerManager {
       player.root.position.x = player.prevX + (player.nextX - player.prevX) * t;
       player.root.position.y = player.prevY + (player.nextY - player.prevY) * t;
       player.root.position.z = player.prevZ + (player.nextZ - player.prevZ) * t;
-      player.root.rotation.y = player.prevRy + (player.nextRy - player.prevRy) * t;
+
+      // Interpolate rotation via shortest path (wrap around ±π)
+      let angleDiff = player.nextRy - player.prevRy;
+      if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      player.root.rotation.y = player.prevRy + angleDiff * t;
 
       if (player.mixer) player.mixer.update(dt);
     }

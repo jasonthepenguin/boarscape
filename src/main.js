@@ -211,7 +211,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       if (sendTimer >= 0.05) {
         sendTimer = 0;
         const pos = player.root.position;
-        const ry = player.root.rotation.y;
+        // Extract Y rotation from quaternion directly (full [-π, π] range).
+        // Reading rotation.y uses 'XYZ' Euler order which clamps Y to [-π/2, π/2].
+        const q = player.root.quaternion;
+        const ry = Math.atan2(
+          2 * (q.x * q.z + q.w * q.y),
+          q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z
+        );
         let anim = "idle";
         if (!player.controller.onGround) anim = "jump";
         else if (player.controller._isMoving) anim = "walk";

@@ -324,7 +324,12 @@ export class NpcManager {
       npc.root.position.x = npc.prevX + (npc.nextX - npc.prevX) * t;
       npc.root.position.y = npc.prevY + (npc.nextY - npc.prevY) * t;
       npc.root.position.z = npc.prevZ + (npc.nextZ - npc.prevZ) * t;
-      npc.root.rotation.y = npc.prevRy + (npc.nextRy - npc.prevRy) * t;
+
+      // Interpolate rotation via shortest path (wrap around ±π)
+      let angleDiff = npc.nextRy - npc.prevRy;
+      if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      npc.root.rotation.y = npc.prevRy + angleDiff * t;
 
       // Death animation
       if (npc.dead) {
