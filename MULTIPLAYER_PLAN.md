@@ -44,10 +44,14 @@ Client  ◄──  { type: "positions", players: [{ id, x, y, z, ry, anim }] }  
 |-----------|------|-------------|
 | Client → Server | `join` | `{ name, color }` — sent on connect |
 | Client → Server | `state` | `{ x, y, z, ry, anim }` — sent at ~20Hz |
-| Server → Client | `joined` | `{ id, players[] }` — confirmation + existing players |
+| Client → Server | `attack` | `{ npcId }` — attack command |
+| Server → Client | `joined` | `{ id, players[], npcs[] }` — confirmation + existing state |
 | Server → Client | `playerJoined` | `{ id, name, color }` — new player notification |
 | Server → Client | `playerLeft` | `{ id }` — player disconnected |
-| Server → Client | `positions` | `{ players[] }` — all player states at 20Hz |
+| Server → Client | `positions` | `{ players[], npcs[] }` — all states at 20Hz |
+| Server → Client | `npcHit` | `{ npcId, addiction, attackerId, attackerX/Y/Z }` — hit notification |
+| Server → Client | `npcDied` | `{ npcId }` — NPC death notification |
+| Server → Client | `npcRemoved` | `{ npcId }` — NPC despawned after 15s |
 | Server → Client | `full` | Server is at capacity (30) |
 
 ## Game Flow
@@ -79,6 +83,14 @@ Run both `dev` and `server` in separate terminals during development.
 - [x] Update `App.svelte` — add server select screen to flow
 - [x] Update `main.js` — integrate networking, send local state, render remote players
 - [x] Add interpolation for remote players
+- [x] Create `server/npcs.js` — server-managed NPCs with AI (idle/walk state machine)
+- [x] Create `src/game/npcManager.js` — NPC rendering, selection ring, death animation
+- [x] Create `src/game/phoneProjectile.js` — phone throw projectile with arc flight
+- [x] Add NPC attack system (F key, 2s cooldown, 3-hit kill)
+- [x] Add NPC selection via click raycasting (golden torus indicator)
+- [x] Add NPC addiction bar visualization (green→orange→red)
+- [x] Add NPC death animation (burn + evaporate) and 15s despawn
+- [x] Sync attacks, NPC state, and death across all clients
 
 ## Future Improvements
 
