@@ -11,39 +11,7 @@ import {
   SphereGeometry,
   Vector3,
 } from "three";
-import {
-  SPAWN_AVOID_RADIUS,
-  PINE_RATIO,
-  ROUND_RATIO,
-  BIRCH_RATIO,
-  TRUNK_COLORS,
-  LEAF_COLORS,
-  BIRCH_TRUNK_COLORS,
-  BIRCH_LEAF_COLORS,
-} from "../../config.js";
-
-function varyColor(rng, baseHex, hueVar = 0.05, satVar = 0.15, lightVar = 0.1) {
-  const color = new Color(baseHex);
-  const hsl = { h: 0, s: 0, l: 0 };
-  color.getHSL(hsl);
-  hsl.h += (rng() - 0.5) * hueVar;
-  hsl.s = Math.max(0, Math.min(1, hsl.s + (rng() - 0.5) * satVar));
-  hsl.l = Math.max(0, Math.min(1, hsl.l + (rng() - 0.5) * lightVar));
-  return new Color().setHSL(hsl.h, hsl.s, hsl.l);
-}
-
-function randomPosition(rng, half) {
-  let x = 0, z = 0;
-  for (let tries = 0; tries < 50; tries++) {
-    x = (rng() * 2 - 1) * (half - 6);
-    z = (rng() * 2 - 1) * (half - 6);
-    if (x * x + z * z > SPAWN_AVOID_RADIUS * SPAWN_AVOID_RADIUS) break;
-  }
-  return { x, z };
-}
-
-export function createTrees(scene, rng, fieldSize, treeCount) {
-  const half = fieldSize / 2;
+export function createTrees(scene, fieldSize, treeDefinitions) {
   const colliders = [];
   const forest = new Group();
 
@@ -52,9 +20,12 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
   const tmpQuat = new Quaternion();
   const tmpScale = new Vector3();
   const yAxis = new Vector3(0, 1, 0);
+  const pineTrees = treeDefinitions.filter((tree) => tree.type === "pine");
+  const roundTrees = treeDefinitions.filter((tree) => tree.type === "round");
+  const birchTrees = treeDefinitions.filter((tree) => tree.type === "birch");
 
   // ===== Layered Pine Trees =====
-  const pineCount = Math.floor(treeCount * PINE_RATIO);
+  const pineCount = pineTrees.length;
   const pineTrunkGeo = new CylinderGeometry(0.12, 0.22, 1.0, 6);
   const pineLayerGeo = new ConeGeometry(1.0, 1.4, 7);
 
@@ -73,10 +44,8 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
   pineLayer3.castShadow = true;
 
   for (let i = 0; i < pineCount; i++) {
-    const { x, z } = randomPosition(rng, half);
-    const scale = 0.7 + rng() * 0.8;
-    const height = 3.5 + rng() * 2.5;
-    const rotY = rng() * Math.PI * 2;
+    const tree = pineTrees[i];
+    const { x, z, scale, height, rotY } = tree;
     tmpQuat.setFromAxisAngle(yAxis, rotY);
 
     // Trunk
@@ -84,9 +53,9 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
     tmpScale.set(scale, height * 0.3, scale);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
     pineTrunks.setMatrixAt(i, tmpMatrix);
-    pineTrunks.setColorAt(i, varyColor(rng, TRUNK_COLORS[i % TRUNK_COLORS.length], 0.02, 0.1, 0.15));
+    pineTrunks.setColorAt(i, new Color(tree.trunkColor));
 
-    const layerColor = varyColor(rng, LEAF_COLORS[i % LEAF_COLORS.length], 0.08, 0.2, 0.12);
+    const layerColor = new Color(tree.leafColor);
 
     // Bottom layer (largest)
     tmpPos.set(x, height * 0.35, z);
@@ -124,7 +93,7 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
   forest.add(pineTrunks, pineLayer1, pineLayer2, pineLayer3);
 
   // ===== Round Deciduous Trees =====
-  const roundCount = Math.floor(treeCount * ROUND_RATIO);
+  const roundCount = roundTrees.length;
   const roundTrunkGeo = new CylinderGeometry(0.15, 0.28, 1.0, 8);
   const roundCanopyGeo = new DodecahedronGeometry(1.0, 1);
 
@@ -139,10 +108,8 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
   roundCanopies.castShadow = true;
 
   for (let i = 0; i < roundCount; i++) {
-    const { x, z } = randomPosition(rng, half);
-    const scale = 0.8 + rng() * 0.7;
-    const trunkHeight = 1.8 + rng() * 1.5;
-    const rotY = rng() * Math.PI * 2;
+    const tree = roundTrees[i];
+    const { x, z, scale, trunkHeight, rotY, canopyScale, canopyHeight } = tree;
     tmpQuat.setFromAxisAngle(yAxis, rotY);
 
     // Trunk
@@ -150,15 +117,14 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
     tmpScale.set(scale * 0.8, trunkHeight, scale * 0.8);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
     roundTrunks.setMatrixAt(i, tmpMatrix);
-    roundTrunks.setColorAt(i, varyColor(rng, TRUNK_COLORS[(i + 2) % TRUNK_COLORS.length], 0.02, 0.1, 0.15));
+    roundTrunks.setColorAt(i, new Color(tree.trunkColor));
 
     // Canopy (squashed sphere)
-    const canopyScale = scale * (1.3 + rng() * 0.5);
     tmpPos.set(x, trunkHeight + canopyScale * 0.6, z);
-    tmpScale.set(canopyScale, canopyScale * (0.7 + rng() * 0.3), canopyScale);
+    tmpScale.set(canopyScale, canopyHeight, canopyScale);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
     roundCanopies.setMatrixAt(i, tmpMatrix);
-    roundCanopies.setColorAt(i, varyColor(rng, LEAF_COLORS[(i + 3) % LEAF_COLORS.length], 0.1, 0.25, 0.15));
+    roundCanopies.setColorAt(i, new Color(tree.leafColor));
 
     colliders.push({ position: new Vector3(x, 0, z), radius: canopyScale * 0.7 });
   }
@@ -171,7 +137,7 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
   forest.add(roundTrunks, roundCanopies);
 
   // ===== Tall Slim Birch-like Trees =====
-  const slimCount = Math.floor(treeCount * BIRCH_RATIO);
+  const slimCount = birchTrees.length;
   const slimTrunkGeo = new CylinderGeometry(0.08, 0.14, 1.0, 6);
   const slimCanopyGeo = new SphereGeometry(1.0, 6, 5);
 
@@ -186,10 +152,8 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
   slimCanopies.castShadow = true;
 
   for (let i = 0; i < slimCount; i++) {
-    const { x, z } = randomPosition(rng, half);
-    const scale = 0.6 + rng() * 0.5;
-    const trunkHeight = 3.5 + rng() * 2.0;
-    const rotY = rng() * Math.PI * 2;
+    const tree = birchTrees[i];
+    const { x, z, scale, trunkHeight, rotY, canopyWidth, canopyHeight } = tree;
     tmpQuat.setFromAxisAngle(yAxis, rotY);
 
     // Tall slim trunk
@@ -197,16 +161,14 @@ export function createTrees(scene, rng, fieldSize, treeCount) {
     tmpScale.set(scale * 0.6, trunkHeight, scale * 0.6);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
     slimTrunks.setMatrixAt(i, tmpMatrix);
-    slimTrunks.setColorAt(i, varyColor(rng, BIRCH_TRUNK_COLORS[i % BIRCH_TRUNK_COLORS.length], 0.02, 0.08, 0.1));
+    slimTrunks.setColorAt(i, new Color(tree.trunkColor));
 
     // Smaller, elongated canopy
-    const canopyWidth = scale * (0.8 + rng() * 0.4);
-    const canopyHeight = scale * (1.2 + rng() * 0.6);
     tmpPos.set(x, trunkHeight + canopyHeight * 0.4, z);
     tmpScale.set(canopyWidth, canopyHeight, canopyWidth);
     tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
     slimCanopies.setMatrixAt(i, tmpMatrix);
-    slimCanopies.setColorAt(i, varyColor(rng, BIRCH_LEAF_COLORS[i % BIRCH_LEAF_COLORS.length], 0.08, 0.2, 0.12));
+    slimCanopies.setColorAt(i, new Color(tree.leafColor));
 
     colliders.push({ position: new Vector3(x, 0, z), radius: canopyWidth * 0.6 });
   }

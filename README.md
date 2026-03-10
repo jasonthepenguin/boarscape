@@ -8,6 +8,7 @@ Multiplayer 3D third-person game built with Three.js, Svelte 5, and WebSockets. 
 npm install
 npm run server   # Start WebSocket server (port 3001)
 npm run dev      # Start Vite dev server (port 5173)
+npm run generate:trees  # Regenerate src/data/treeSpawns.json
 ```
 
 Run both commands in separate terminals, then open `http://localhost:5173`.
@@ -31,4 +32,3 @@ Run both commands in separate terminals, then open `http://localhost:5173`.
 - NPC addiction system, death animation, and 15s despawn
 - Procedural environment: 500 trees (3 types), grass texture, seeded RNG
 - Medieval-themed UI: name entry, character editor, server select, in-game HUD
-

@@ -5,7 +5,6 @@ export const FIELD_SIZE = 120;
 export const TREE_COUNT = 500;
 export const SPAWN_AVOID_RADIUS = 16;
 export const GROUND_Y = 0;
-export const RNG_SEED = 42;
 
 // =============================================================================
 // Player
