@@ -1,5 +1,8 @@
 <script>
   import { loading, actionBar, playerStats } from "./stores.svelte.js";
+  import EscMenu from "./EscMenu.svelte";
+
+  let { onresume, onleave } = $props();
 
   let cooldownPct = $derived(
     actionBar.cooldownTotal > 0
@@ -15,6 +18,8 @@
 </script>
 
 <div class="hud">
+  <EscMenu {onresume} {onleave} />
+
   {#if loading.text}
     <div class="panel loading">{loading.text}</div>
   {/if}
@@ -65,6 +70,7 @@
     <div><span class="key">Wheel</span> Zoom</div>
     <div><span class="key">Click</span> Select NPC</div>
     <div><span class="key">F</span> Throw phone</div>
+    <div><span class="key">Esc</span> Game menu</div>
   </div>
 </div>
 

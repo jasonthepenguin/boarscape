@@ -36,6 +36,7 @@ import {
 export function createScene(canvas) {
   const scene = new Scene();
   scene.background = new Color(BG_COLOR);
+  let frameId = null;
 
   const camera = new PerspectiveCamera(CAMERA_FOV, 1, CAMERA_NEAR, CAMERA_FAR);
   camera.position.set(0, 6, 10);
@@ -94,7 +95,7 @@ export function createScene(canvas) {
     const clock = new Clock();
 
     function tick() {
-      requestAnimationFrame(tick);
+      frameId = requestAnimationFrame(tick);
       const dt = Math.min(MAX_DT, clock.getDelta());
       updateFn(dt);
       renderer.render(scene, camera);
@@ -103,5 +104,14 @@ export function createScene(canvas) {
     tick();
   }
 
-  return { scene, camera, start };
+  function stop() {
+    if (frameId !== null) {
+      cancelAnimationFrame(frameId);
+      frameId = null;
+    }
+    window.removeEventListener("resize", resize);
+    renderer.dispose();
+  }
+
+  return { scene, camera, start, stop };
 }

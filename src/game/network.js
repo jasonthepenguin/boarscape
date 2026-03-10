@@ -67,5 +67,14 @@ export class NetworkManager {
   disconnect() {
     this.ws?.close();
     this.ws = null;
+    this.playerId = null;
+    this.onPlayerJoined = null;
+    this.onPlayerLeft = null;
+    this.onPositions = null;
+    this.onNpcPositions = null;
+    this.onNpcHit = null;
+    this.onNpcDied = null;
+    this.onNpcRemoved = null;
+    this.onNpcSpawned = null;
   }
 }

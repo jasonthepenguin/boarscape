@@ -41,3 +41,22 @@ export const playerStats = {
   get xpIntoCurrentLevel() { return _xpIntoCurrentLevel; },
   set xpIntoCurrentLevel(v) { _xpIntoCurrentLevel = v; },
 };
+
+let _gameMenuOpen = $state(false);
+
+export const gameMenu = {
+  get open() { return _gameMenuOpen; },
+  set open(v) { _gameMenuOpen = v; },
+};
+
+export function resetUiState() {
+  _loadingText = null;
+  _cooldownRemaining = 0;
+  _cooldownTotal = 0;
+  _selectedNpcId = null;
+  _xp = 0;
+  _level = 1;
+  _xpForNextLevel = 1000;
+  _xpIntoCurrentLevel = 0;
+  _gameMenuOpen = false;
+}

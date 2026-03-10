@@ -137,6 +137,15 @@ export class InputManager {
     return delta;
   }
 
+  clearTransientInputs() {
+    this._jumpPressed = false;
+    this._attackPressed = false;
+    this._clickEvent = null;
+    this._pointerDx = 0;
+    this._pointerDy = 0;
+    this._wheelDelta = 0;
+  }
+
   dispose() {
     window.removeEventListener("keydown", this._onKeyDown);
     window.removeEventListener("keyup", this._onKeyUp);

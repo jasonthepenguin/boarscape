@@ -2,7 +2,7 @@ import "./style.css";
 
 import { mount } from "svelte";
 import App from "./App.svelte";
-import { loading, actionBar, playerStats } from "./ui/stores.svelte.js";
+import { loading, actionBar, playerStats, gameMenu, resetUiState } from "./ui/stores.svelte.js";
 import { createScene } from "./game/scene.js";
 import { createEnvironment } from "./game/environment/index.js";
 import { InputManager } from "./game/input.js";
@@ -27,7 +27,8 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const canvas = document.getElementById("game");
   canvas.style.display = "block";
 
-  const { scene, camera, start } = createScene(canvas);
+  const { scene, camera, start, stop } = createScene(canvas);
+  let destroyed = false;
 
   loading.text = "Loading world...";
   const env = createEnvironment(scene);
@@ -43,6 +44,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const pointerNdc = new Vector2();
   let attackCooldown = 0;
   let levelUpAura = null;
+  let wasMenuOpen = false;
 
   // XP / leveling helpers
   function cumulativeXpForLevel(level) {
@@ -73,6 +75,32 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     if (lvl > oldLevel && player?.root) {
       levelUpAura = createLevelUpAura(player.root);
     }
+  }
+
+  function getPlayerYaw() {
+    if (!player?.root) return 0;
+    const q = player.root.quaternion;
+    return Math.atan2(
+      2 * (q.x * q.z + q.w * q.y),
+      q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z
+    );
+  }
+
+  function sendIdleState() {
+    if (!player?.root) return;
+    const pos = player.root.position;
+    network.sendState(pos.x, pos.y, pos.z, getPlayerYaw(), "idle");
+  }
+
+  function pauseLocalPlayer() {
+    if (!player?.controller) return;
+    player.controller.velocity.x = 0;
+    player.controller.velocity.z = 0;
+    if (player.controller._isMoving) {
+      player.controller._isMoving = false;
+      player.stopAnimation?.("walk");
+    }
+    sendIdleState();
   }
 
   // Spawn existing players that were already on the server
@@ -184,10 +212,15 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     },
   })
     .then((result) => {
+      if (destroyed) {
+        result.root.removeFromParent();
+        return;
+      }
       player = result;
       loading.text = null;
     })
     .catch((err) => {
+      if (destroyed) return;
       console.error(err);
       loading.text = "Failed to load player model. Check console.";
     });
@@ -196,7 +229,18 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   let sendTimer = 0;
 
   start((dt) => {
-    if (player?.controller) player.controller.update(dt);
+    if (destroyed) return;
+
+    if (gameMenu.open && !wasMenuOpen) {
+      pauseLocalPlayer();
+    }
+    wasMenuOpen = gameMenu.open;
+
+    if (gameMenu.open) {
+      input.clearTransientInputs();
+    }
+
+    if (!gameMenu.open && player?.controller) player.controller.update(dt);
     if (player?.mixer) player.mixer.update(dt);
     remotePlayers.update(dt);
     npcManager.update(dt);
@@ -212,12 +256,12 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
     // Handle click for NPC selection
     const click = input.consumeClick();
-    if (click) {
+    if (!gameMenu.open && click) {
       handleClick(click);
     }
 
     // Handle F key for attack
-    if (input.wasAttackPressed() && npcManager.selectedNpcId && attackCooldown <= 0 && player?.root) {
+    if (!gameMenu.open && input.wasAttackPressed() && npcManager.selectedNpcId && attackCooldown <= 0 && player?.root) {
       const targetPos = npcManager.getNpcWorldPosition(npcManager.selectedNpcId);
       if (targetPos) {
         const playerPos = player.root.position;
@@ -245,18 +289,12 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     }
 
     // Send position to server
-    if (player?.root) {
+    if (!gameMenu.open && player?.root) {
       sendTimer += dt;
       if (sendTimer >= 0.05) {
         sendTimer = 0;
         const pos = player.root.position;
-        // Extract Y rotation from quaternion directly (full [-π, π] range).
-        // Reading rotation.y uses 'XYZ' Euler order which clamps Y to [-π/2, π/2].
-        const q = player.root.quaternion;
-        const ry = Math.atan2(
-          2 * (q.x * q.z + q.w * q.y),
-          q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z
-        );
+        const ry = getPlayerYaw();
         let anim = "idle";
         if (!player.controller.onGround) anim = "jump";
         else if (player.controller._isMoving) anim = "walk";
@@ -264,4 +302,34 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       }
     }
   });
+
+  function disposeSceneGraph() {
+    scene.traverse((obj) => {
+      if (obj.geometry?.dispose) obj.geometry.dispose();
+
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const material of materials) {
+        if (!material) continue;
+        for (const value of Object.values(material)) {
+          if (value?.isTexture && value.dispose) value.dispose();
+        }
+        material.dispose?.();
+      }
+    });
+  }
+
+  function destroy() {
+    if (destroyed) return;
+    destroyed = true;
+    network.disconnect();
+    input.dispose();
+    gameMenu.open = false;
+    canvas.classList.remove("dragging");
+    canvas.style.display = "none";
+    stop();
+    disposeSceneGraph();
+    resetUiState();
+  }
+
+  return { destroy };
 }
