@@ -4,6 +4,7 @@ export class InputManager {
     this._keysDown = new Set();
     this._jumpPressed = false;
     this._attackPressed = false;
+    this._netPressed = false;
 
     // Pointer drag state
     this._dragging = false;
@@ -30,6 +31,9 @@ export class InputManager {
       }
       if (e.code === "KeyF" && !e.repeat) {
         this._attackPressed = true;
+      }
+      if (e.code === "Digit2" && !e.repeat) {
+        this._netPressed = true;
       }
     };
 
@@ -117,6 +121,14 @@ export class InputManager {
     return false;
   }
 
+  wasNetPressed() {
+    if (this._netPressed) {
+      this._netPressed = false;
+      return true;
+    }
+    return false;
+  }
+
   consumeClick() {
     const click = this._clickEvent;
     this._clickEvent = null;
@@ -140,6 +152,7 @@ export class InputManager {
   clearTransientInputs() {
     this._jumpPressed = false;
     this._attackPressed = false;
+    this._netPressed = false;
     this._clickEvent = null;
     this._pointerDx = 0;
     this._pointerDy = 0;

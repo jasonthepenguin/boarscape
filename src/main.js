@@ -10,7 +10,8 @@ import { loadPlayer, createLevelUpAura, updateNametag } from "./game/player.js";
 import { RemotePlayerManager } from "./game/remotePlayers.js";
 import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
-import { ATTACK_COOLDOWN, ATTACK_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
+import { NetManager } from "./game/netManager.js";
+import { ATTACK_COOLDOWN, ATTACK_RANGE, NET_COOLDOWN, NET_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
 import { Raycaster, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
@@ -38,13 +39,16 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const remotePlayers = new RemotePlayerManager(scene, modelUrl);
   const npcManager = new NpcManager(scene);
   const phoneProjectiles = new PhoneProjectileManager(scene);
+  const netManager = new NetManager(scene);
 
   // Raycaster for NPC click selection
   const raycaster = new Raycaster();
   const pointerNdc = new Vector2();
   let attackCooldown = 0;
+  let netCooldown = 0;
   let levelUpAura = null;
   let wasMenuOpen = false;
+  let localNetEquipped = false;
 
   // XP / leveling helpers
   function cumulativeXpForLevel(level) {
@@ -107,7 +111,12 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   // Spawn existing players that were already on the server
   for (const p of existingPlayers) {
-    remotePlayers.addPlayer(p.id, p.name, p.color, p.level ?? 1);
+    remotePlayers.addPlayer(p.id, p.name, p.color, p.level ?? 1).then(() => {
+      if (p.netEquipped) {
+        const root = remotePlayers.getRoot(p.id);
+        if (root) netManager.equip(root);
+      }
+    });
   }
 
   // Spawn NPCs that are already on the server
@@ -120,13 +129,26 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   // Wire up network events
   network.onPlayerJoined = (msg) => {
-    remotePlayers.addPlayer(msg.id, msg.name, msg.color, msg.level ?? 1);
+    remotePlayers.addPlayer(msg.id, msg.name, msg.color, msg.level ?? 1).then(() => {
+      if (msg.netEquipped) {
+        const root = remotePlayers.getRoot(msg.id);
+        if (root) netManager.equip(root);
+      }
+    });
   };
   network.onPlayerLeft = (msg) => {
+    const root = remotePlayers.getRoot(msg.id);
+    if (root) netManager.unequip(root);
     remotePlayers.removePlayer(msg.id);
   };
   network.onPlayerLevelUp = (msg) => {
     remotePlayers.setLevel(msg.id, msg.level);
+  };
+  network.onPlayerNetEquipped = (msg) => {
+    const root = remotePlayers.getRoot(msg.id);
+    if (!root) return;
+    if (msg.equipped) netManager.equip(root);
+    else netManager.unequip(root);
   };
   network.onPositions = (states) => {
     const remoteStates = states.filter((s) => s.id !== network.playerId);
@@ -164,6 +186,16 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   };
   network.onNpcSpawned = (msg) => {
     npcManager.addNpc(msg.npc.id, msg.npc.name);
+  };
+  network.onNpcSwooped = (msg) => {
+    // We already triggered our own swoop animation locally on press.
+    // For other players' swoops, animate from their remote model.
+    if (msg.attackerId === network.playerId) return;
+    const attackerRoot = remotePlayers.getRoot(msg.attackerId);
+    const npc = npcManager.npcs.get(msg.npcId);
+    if (attackerRoot && npc?.root) {
+      netManager.swoop(attackerRoot, npc.root);
+    }
   };
 
   // NPC selection via click
@@ -250,6 +282,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     remotePlayers.update(dt);
     npcManager.update(dt);
     phoneProjectiles.update(dt);
+    netManager.update(dt);
     if (levelUpAura && !levelUpAura.done) levelUpAura.update(dt);
 
     // Attack cooldown
@@ -257,6 +290,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       attackCooldown -= dt;
       if (attackCooldown < 0) attackCooldown = 0;
       actionBar.cooldownRemaining = attackCooldown;
+    }
+
+    // Net cooldown
+    if (netCooldown > 0) {
+      netCooldown -= dt;
+      if (netCooldown < 0) netCooldown = 0;
+      actionBar.netCooldownRemaining = netCooldown;
     }
 
     // Handle click for NPC selection
@@ -290,6 +330,44 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
             network.sendAttack(npcId);
           });
         }
+      }
+    }
+
+    // Handle 2 key: first press equips net, second press with valid target swoops + kills.
+    if (!gameMenu.open && input.wasNetPressed() && player?.root && netCooldown <= 0) {
+      const npcId = npcManager.selectedNpcId;
+      let didSwoop = false;
+
+      if (localNetEquipped && npcId) {
+        const targetPos = npcManager.getNpcWorldPosition(npcId);
+        if (targetPos) {
+          const playerPos = player.root.position;
+          const dist = Math.sqrt(
+            (targetPos.x - playerPos.x) ** 2 + (targetPos.z - playerPos.z) ** 2
+          );
+          if (dist <= NET_RANGE) {
+            const npc = npcManager.npcs.get(npcId);
+            if (npc?.root) {
+              netManager.swoop(player.root, npc.root);
+              network.sendSwoop(npcId);
+              localNetEquipped = false;
+              actionBar.netEquipped = false;
+              netCooldown = NET_COOLDOWN;
+              actionBar.netCooldownRemaining = NET_COOLDOWN;
+              actionBar.netCooldownTotal = NET_COOLDOWN;
+              didSwoop = true;
+            }
+          }
+        }
+      }
+
+      if (!didSwoop) {
+        // Toggle equip state
+        localNetEquipped = !localNetEquipped;
+        actionBar.netEquipped = localNetEquipped;
+        if (localNetEquipped) netManager.equip(player.root);
+        else netManager.unequip(player.root);
+        network.sendNetEquipped(localNetEquipped);
       }
     }
 

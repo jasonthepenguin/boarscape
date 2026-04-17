@@ -1,5 +1,6 @@
 import { WebSocketServer } from "ws";
-import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc } from "./npcs.js";
+import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, swoopKill } from "./npcs.js";
+import { NET_RANGE } from "../src/config.js";
 import { NPC_RESPAWN_DELAY } from "../src/config.js";
 
 const PORT = 3001;
@@ -37,6 +38,7 @@ wss.on("connection", (ws) => {
         name: msg.name,
         color: msg.color,
         level: 1,
+        netEquipped: false,
         x: 0,
         y: 0,
         z: 0,
@@ -54,6 +56,7 @@ wss.on("connection", (ws) => {
             name: p.name,
             color: p.color,
             level: p.level,
+            netEquipped: p.netEquipped,
             x: p.x,
             y: p.y,
             z: p.z,
@@ -72,6 +75,7 @@ wss.on("connection", (ws) => {
           name: msg.name,
           color: msg.color,
           level: 1,
+          netEquipped: false,
         },
         playerId,
       );
@@ -120,6 +124,48 @@ wss.on("connection", (ws) => {
           killerId: playerId,
         });
       }
+    }
+
+    if (msg.type === "netEquipped" && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+      const equipped = !!msg.equipped;
+      if (player.netEquipped === equipped) return;
+      player.netEquipped = equipped;
+      broadcast({ type: "playerNetEquipped", id: playerId, equipped });
+    }
+
+    if (msg.type === "swoop" && playerId) {
+      const npc = npcs.find(n => n.id === msg.npcId);
+      if (!npc) return;
+      const player = players.get(playerId);
+      if (!player) return;
+      if (!player.netEquipped) return;
+
+      const dx = npc.x - player.x;
+      const dz = npc.z - player.z;
+      if (dx * dx + dz * dz > NET_RANGE * NET_RANGE) return;
+
+      const result = swoopKill(npc);
+      if (!result) return;
+
+      broadcast({
+        type: "npcSwooped",
+        npcId: npc.id,
+        attackerId: playerId,
+        attackerX: player.x,
+        attackerY: player.y,
+        attackerZ: player.z,
+      });
+      broadcast({
+        type: "npcDied",
+        npcId: npc.id,
+        killerId: playerId,
+      });
+
+      // Auto-unequip after swoop
+      player.netEquipped = false;
+      broadcast({ type: "playerNetEquipped", id: playerId, equipped: false });
     }
 
     if (msg.type === "levelUp" && playerId) {

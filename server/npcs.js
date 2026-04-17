@@ -55,6 +55,17 @@ export function shouldDespawn(npc) {
   return npc.state === "dead" && (npc.deathTimer || 0) >= NPC_DESPAWN_DELAY;
 }
 
+export function swoopKill(npc) {
+  if (npc.state === "dead") return null;
+  npc.state = "dead";
+  npc.anim = "dead";
+  npc.vx = 0;
+  npc.vz = 0;
+  npc.deathTimer = 0;
+  npc.addiction = NPC_MAX_ADDICTION;
+  return { killed: true };
+}
+
 export function updateNpcs(npcs, dt) {
   const limit = BOUNDS_HALF - BOUNDS_MARGIN;
 
