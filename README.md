@@ -22,6 +22,7 @@ Run both commands in separate terminals, then open `http://localhost:5173`.
 - **Mouse wheel**: zoom
 - **Click**: select NPC
 - **F**: throw phone at selected NPC (2s cooldown, 3 hits to kill)
+- **Esc**: open pause menu (resume / leave server)
 
 ## Features
 
@@ -29,6 +30,8 @@ Run both commands in separate terminals, then open `http://localhost:5173`.
 - Multiplayer via WebSocket relay server (20Hz tick rate)
 - 8 server-managed NPCs with walking AI
 - Phone throw attack with parabolic arc projectile
-- NPC addiction system, death animation, and 15s despawn
+- NPC addiction system, death animation, 15s despawn, and 10s respawn
+- XP and leveling: 500 XP per kill, rising thresholds, level-up glow
+- HUD with level badge, XP bar, and 5-slot action bar
 - Procedural environment: 500 trees (3 types), grass texture, seeded RNG
-- Medieval-themed UI: name entry, character editor, server select, in-game HUD
+- Medieval-themed UI: name entry, character editor, server select, in-game HUD, Esc pause menu

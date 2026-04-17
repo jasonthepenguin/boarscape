@@ -50,8 +50,9 @@ Client  ◄──  { type: "positions", players: [{ id, x, y, z, ry, anim }] }  
 | Server → Client | `playerLeft` | `{ id }` — player disconnected |
 | Server → Client | `positions` | `{ players[], npcs[] }` — all states at 20Hz |
 | Server → Client | `npcHit` | `{ npcId, addiction, attackerId, attackerX/Y/Z }` — hit notification |
-| Server → Client | `npcDied` | `{ npcId }` — NPC death notification |
+| Server → Client | `npcDied` | `{ npcId, killerId }` — NPC death notification |
 | Server → Client | `npcRemoved` | `{ npcId }` — NPC despawned after 15s |
+| Server → Client | `npcSpawned` | `{ npc: { id, name, x, y, z, ry, anim, addiction } }` — NPC respawned 10s after despawn |
 | Server → Client | `full` | Server is at capacity (30) |
 
 ## Game Flow
@@ -91,6 +92,10 @@ Run both `dev` and `server` in separate terminals during development.
 - [x] Add NPC addiction bar visualization (green→orange→red)
 - [x] Add NPC death animation (burn + evaporate) and 15s despawn
 - [x] Sync attacks, NPC state, and death across all clients
+- [x] NPC respawn 10s after despawn (`npcSpawned` broadcast)
+- [x] XP / leveling system (500 XP per kill, rising thresholds, level-up glow)
+- [x] HUD level badge + XP bar + 5-slot action bar
+- [x] Esc pause menu (resume / leave server)
 
 ## Future Improvements
 
