@@ -11,6 +11,7 @@ export class NetworkManager {
     this.onNpcDied = null;
     this.onNpcRemoved = null;
     this.onNpcSpawned = null;
+    this.onPlayerLevelUp = null;
   }
 
   connect(name, color) {
@@ -44,6 +45,8 @@ export class NetworkManager {
           this.onNpcRemoved?.(msg);
         } else if (msg.type === "npcSpawned") {
           this.onNpcSpawned?.(msg);
+        } else if (msg.type === "playerLevelUp") {
+          this.onPlayerLevelUp?.(msg);
         }
       };
 
@@ -64,6 +67,12 @@ export class NetworkManager {
     }
   }
 
+  sendLevelUp(level) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "levelUp", level }));
+    }
+  }
+
   disconnect() {
     this.ws?.close();
     this.ws = null;
@@ -76,5 +85,6 @@ export class NetworkManager {
     this.onNpcDied = null;
     this.onNpcRemoved = null;
     this.onNpcSpawned = null;
+    this.onPlayerLevelUp = null;
   }
 }

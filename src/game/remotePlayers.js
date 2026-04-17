@@ -9,7 +9,7 @@ import {
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneModel } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { createNametag } from "./player.js";
+import { createNametag, updateNametag } from "./player.js";
 import { PLAYER_DESIRED_HEIGHT } from "../config.js";
 
 const TICK_RATE = 20;
@@ -49,7 +49,7 @@ export class RemotePlayerManager {
     });
   }
 
-  async addPlayer(id, name, color) {
+  async addPlayer(id, name, color, level = 1) {
     await this._ready;
     if (this.players.has(id)) return;
 
@@ -75,7 +75,7 @@ export class RemotePlayerManager {
     });
 
     // Nametag
-    const nametag = createNametag(name);
+    const nametag = createNametag(name, level);
     const bounds = new Box3().setFromObject(model);
     nametag.position.y = bounds.max.y - bounds.min.y + 0.4;
     root.add(nametag);
@@ -96,11 +96,21 @@ export class RemotePlayerManager {
       root,
       mixer,
       actions,
+      nametag,
+      name,
+      level,
       currentAnim: null,
       prevX: 0, prevY: 0, prevZ: 0, prevRy: 0,
       nextX: 0, nextY: 0, nextZ: 0, nextRy: 0,
       t: 1,
     });
+  }
+
+  setLevel(id, level) {
+    const player = this.players.get(id);
+    if (!player || player.level === level) return;
+    player.level = level;
+    updateNametag(player.nametag, player.name, level);
   }
 
   removePlayer(id) {

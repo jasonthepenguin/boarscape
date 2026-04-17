@@ -20,20 +20,25 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { ThirdPersonController } from "./thirdPersonController.js";
 import { PLAYER_DESIRED_HEIGHT } from "../config.js";
 
+const NAMETAG_SPRITE_HEIGHT = 0.5;
+
 /**
- * Creates a nametag sprite with the given name
+ * Renders "[Lv N] Name" into a canvas — level in gold, name in white.
  */
-export function createNametag(name) {
+function renderNametagCanvas(name, level) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
   const fontSize = 48;
   const padding = 16;
-  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-  const metrics = ctx.measureText(name);
-  const textWidth = metrics.width;
+  const gap = 14;
+  const levelText = `Lv ${level}`;
 
-  canvas.width = textWidth + padding * 2;
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  const levelWidth = ctx.measureText(levelText).width;
+  const nameWidth = ctx.measureText(name).width;
+
+  canvas.width = levelWidth + gap + nameWidth + padding * 2;
   canvas.height = fontSize + padding * 1.5;
 
   // Semi-transparent black background with rounded corners
@@ -54,17 +59,44 @@ export function createNametag(name) {
   ctx.closePath();
   ctx.fill();
 
-  // White text with slight shadow
   ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-  ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+
+  // Gold level text with warm glow (matches HUD --rs-gold theme)
+  ctx.fillStyle = "#ffd86b";
+  ctx.shadowColor = "rgba(255, 179, 0, 0.9)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillText(levelText, padding, canvas.height / 2);
+
+  // White name text with soft dark shadow
   ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
   ctx.shadowBlur = 4;
   ctx.shadowOffsetX = 1;
   ctx.shadowOffsetY = 1;
-  ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(name, padding + levelWidth + gap, canvas.height / 2);
 
+  return canvas;
+}
+
+function applyCanvasToSprite(sprite, canvas) {
+  sprite.material.map?.dispose();
+  const texture = new CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  sprite.material.map = texture;
+  sprite.material.needsUpdate = true;
+  const aspect = canvas.width / canvas.height;
+  sprite.scale.set(NAMETAG_SPRITE_HEIGHT * aspect, NAMETAG_SPRITE_HEIGHT, 1);
+}
+
+/**
+ * Creates a nametag sprite with the given name and level.
+ */
+export function createNametag(name, level = 1) {
+  const canvas = renderNametagCanvas(name, level);
   const texture = new CanvasTexture(canvas);
   texture.needsUpdate = true;
 
@@ -76,11 +108,18 @@ export function createNametag(name) {
   });
 
   const sprite = new Sprite(material);
-  const spriteHeight = 0.5;
   const aspect = canvas.width / canvas.height;
-  sprite.scale.set(spriteHeight * aspect, spriteHeight, 1);
+  sprite.scale.set(NAMETAG_SPRITE_HEIGHT * aspect, NAMETAG_SPRITE_HEIGHT, 1);
 
   return sprite;
+}
+
+/**
+ * Updates an existing nametag sprite with a new name/level, re-rendering the texture.
+ */
+export function updateNametag(sprite, name, level) {
+  const canvas = renderNametagCanvas(name, level);
+  applyCanvasToSprite(sprite, canvas);
 }
 
 /**
@@ -143,7 +182,7 @@ export function loadPlayer(scene, camera, input, environment, options = {}) {
         setupPlayerMaterials(playerModel, color);
 
         // Add nametag above player
-        const nametag = createNametag(playerName);
+        const nametag = createNametag(playerName, 1);
         const playerBounds = new Box3().setFromObject(playerModel);
         const playerHeight = playerBounds.max.y - playerBounds.min.y;
         nametag.position.y = playerHeight + 0.4;
@@ -236,6 +275,8 @@ export function loadPlayer(scene, camera, input, environment, options = {}) {
           actions,
           playAnimation,
           stopAnimation,
+          nametag,
+          name: playerName,
         });
       },
       (ev) => {

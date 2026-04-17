@@ -36,6 +36,7 @@ wss.on("connection", (ws) => {
         id: playerId,
         name: msg.name,
         color: msg.color,
+        level: 1,
         x: 0,
         y: 0,
         z: 0,
@@ -52,6 +53,7 @@ wss.on("connection", (ws) => {
             id: p.id,
             name: p.name,
             color: p.color,
+            level: p.level,
             x: p.x,
             y: p.y,
             z: p.z,
@@ -69,6 +71,7 @@ wss.on("connection", (ws) => {
           id: playerId,
           name: msg.name,
           color: msg.color,
+          level: 1,
         },
         playerId,
       );
@@ -117,6 +120,15 @@ wss.on("connection", (ws) => {
           killerId: playerId,
         });
       }
+    }
+
+    if (msg.type === "levelUp" && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+      const newLevel = Number(msg.level);
+      if (!Number.isFinite(newLevel) || newLevel <= player.level) return;
+      player.level = newLevel;
+      broadcast({ type: "playerLevelUp", id: playerId, level: newLevel });
     }
   });
 

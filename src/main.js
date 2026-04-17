@@ -6,7 +6,7 @@ import { loading, actionBar, playerStats, gameMenu, resetUiState } from "./ui/st
 import { createScene } from "./game/scene.js";
 import { createEnvironment } from "./game/environment/index.js";
 import { InputManager } from "./game/input.js";
-import { loadPlayer, createLevelUpAura } from "./game/player.js";
+import { loadPlayer, createLevelUpAura, updateNametag } from "./game/player.js";
 import { RemotePlayerManager } from "./game/remotePlayers.js";
 import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
@@ -71,9 +71,11 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     playerStats.xpIntoCurrentLevel = playerStats.xp - xpAtCurrentLevel;
     playerStats.xpForNextLevel = xpAtNextLevel - xpAtCurrentLevel;
 
-    // Level up glow
-    if (lvl > oldLevel && player?.root) {
-      levelUpAura = createLevelUpAura(player.root);
+    // Level up glow + nametag + network broadcast
+    if (lvl > oldLevel) {
+      if (player?.root) levelUpAura = createLevelUpAura(player.root);
+      if (player?.nametag) updateNametag(player.nametag, player.name, lvl);
+      network.sendLevelUp(lvl);
     }
   }
 
@@ -105,7 +107,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   // Spawn existing players that were already on the server
   for (const p of existingPlayers) {
-    remotePlayers.addPlayer(p.id, p.name, p.color);
+    remotePlayers.addPlayer(p.id, p.name, p.color, p.level ?? 1);
   }
 
   // Spawn NPCs that are already on the server
@@ -118,10 +120,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   // Wire up network events
   network.onPlayerJoined = (msg) => {
-    remotePlayers.addPlayer(msg.id, msg.name, msg.color);
+    remotePlayers.addPlayer(msg.id, msg.name, msg.color, msg.level ?? 1);
   };
   network.onPlayerLeft = (msg) => {
     remotePlayers.removePlayer(msg.id);
+  };
+  network.onPlayerLevelUp = (msg) => {
+    remotePlayers.setLevel(msg.id, msg.level);
   };
   network.onPositions = (states) => {
     const remoteStates = states.filter((s) => s.id !== network.playerId);
