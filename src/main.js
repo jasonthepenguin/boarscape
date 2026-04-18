@@ -11,7 +11,8 @@ import { RemotePlayerManager } from "./game/remotePlayers.js";
 import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
 import { NetManager } from "./game/netManager.js";
-import { ATTACK_COOLDOWN, ATTACK_RANGE, NET_COOLDOWN, NET_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
+import { GrenadeManager } from "./game/grenadeProjectile.js";
+import { ATTACK_COOLDOWN, ATTACK_RANGE, NET_COOLDOWN, NET_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
 import { Raycaster, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
@@ -40,12 +41,14 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const npcManager = new NpcManager(scene);
   const phoneProjectiles = new PhoneProjectileManager(scene);
   const netManager = new NetManager(scene);
+  const grenadeManager = new GrenadeManager(scene);
 
   // Raycaster for NPC click selection
   const raycaster = new Raycaster();
   const pointerNdc = new Vector2();
   let attackCooldown = 0;
   let netCooldown = 0;
+  let grenadeCooldown = 0;
   let levelUpAura = null;
   let wasMenuOpen = false;
   let localNetEquipped = false;
@@ -149,6 +152,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     if (!root) return;
     if (msg.equipped) netManager.equip(root);
     else netManager.unequip(root);
+  };
+  network.onGrenadeThrown = (msg) => {
+    // Attacker already spawned locally on press. Observers spawn here.
+    if (msg.attackerId === network.playerId) return;
+    const startPos = new Vector3(msg.startX, msg.startY + 1.2, msg.startZ);
+    const targetPos = new Vector3(msg.targetX, 0, msg.targetZ);
+    grenadeManager.throwAt(startPos, targetPos);
   };
   network.onPositions = (states) => {
     const remoteStates = states.filter((s) => s.id !== network.playerId);
@@ -283,6 +293,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     npcManager.update(dt);
     phoneProjectiles.update(dt);
     netManager.update(dt);
+    grenadeManager.update(dt);
     if (levelUpAura && !levelUpAura.done) levelUpAura.update(dt);
 
     // Attack cooldown
@@ -297,6 +308,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       netCooldown -= dt;
       if (netCooldown < 0) netCooldown = 0;
       actionBar.netCooldownRemaining = netCooldown;
+    }
+
+    // Grenade cooldown
+    if (grenadeCooldown > 0) {
+      grenadeCooldown -= dt;
+      if (grenadeCooldown < 0) grenadeCooldown = 0;
+      actionBar.grenadeCooldownRemaining = grenadeCooldown;
     }
 
     // Handle click for NPC selection
@@ -368,6 +386,30 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
         if (localNetEquipped) netManager.equip(player.root);
         else netManager.unequip(player.root);
         network.sendNetEquipped(localNetEquipped);
+      }
+    }
+
+    // Handle 3 key for grenade
+    if (!gameMenu.open && input.wasGrenadePressed() && npcManager.selectedNpcId && grenadeCooldown <= 0 && player?.root) {
+      const npcId = npcManager.selectedNpcId;
+      const targetPos = npcManager.getNpcWorldPosition(npcId);
+      if (targetPos) {
+        const playerPos = player.root.position;
+        const dist = Math.sqrt(
+          (targetPos.x - playerPos.x) ** 2 + (targetPos.z - playerPos.z) ** 2
+        );
+
+        if (dist <= GRENADE_RANGE) {
+          grenadeCooldown = GRENADE_COOLDOWN;
+          actionBar.grenadeCooldownRemaining = GRENADE_COOLDOWN;
+          actionBar.grenadeCooldownTotal = GRENADE_COOLDOWN;
+
+          const startPos = player.root.position.clone();
+          startPos.y += 1.2;
+          const landPos = new Vector3(targetPos.x, 0, targetPos.z);
+          grenadeManager.throwAt(startPos, landPos);
+          network.sendGrenade(npcId);
+        }
       }
     }
 

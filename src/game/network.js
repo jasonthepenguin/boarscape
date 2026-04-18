@@ -14,6 +14,7 @@ export class NetworkManager {
     this.onPlayerLevelUp = null;
     this.onNpcSwooped = null;
     this.onPlayerNetEquipped = null;
+    this.onGrenadeThrown = null;
   }
 
   connect(name, color) {
@@ -53,6 +54,8 @@ export class NetworkManager {
           this.onNpcSwooped?.(msg);
         } else if (msg.type === "playerNetEquipped") {
           this.onPlayerNetEquipped?.(msg);
+        } else if (msg.type === "grenadeThrown") {
+          this.onGrenadeThrown?.(msg);
         }
       };
 
@@ -91,6 +94,12 @@ export class NetworkManager {
     }
   }
 
+  sendGrenade(npcId) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "grenade", npcId }));
+    }
+  }
+
   disconnect() {
     this.ws?.close();
     this.ws = null;
@@ -106,5 +115,6 @@ export class NetworkManager {
     this.onPlayerLevelUp = null;
     this.onNpcSwooped = null;
     this.onPlayerNetEquipped = null;
+    this.onGrenadeThrown = null;
   }
 }

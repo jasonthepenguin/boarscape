@@ -14,8 +14,14 @@
       ? (actionBar.netCooldownRemaining / actionBar.netCooldownTotal) * 100
       : 0
   );
+  let grenadeCooldownPct = $derived(
+    actionBar.grenadeCooldownTotal > 0
+      ? (actionBar.grenadeCooldownRemaining / actionBar.grenadeCooldownTotal) * 100
+      : 0
+  );
   let canAttack = $derived(actionBar.cooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
   let canNet = $derived(actionBar.netCooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
+  let canGrenade = $derived(actionBar.grenadeCooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
   let xpPct = $derived(
     playerStats.xpForNextLevel > 0
       ? (playerStats.xpIntoCurrentLevel / playerStats.xpForNextLevel) * 100
@@ -50,9 +56,16 @@
         <div class="cooldown-overlay" style:height="{netCooldownPct}%"></div>
       {/if}
     </div>
-    {#each Array(3) as _, i}
+    <div class="action-slot active" class:ready={canGrenade}>
+      <div class="slot-key">3</div>
+      <div class="slot-icon">💣</div>
+      {#if grenadeCooldownPct > 0}
+        <div class="cooldown-overlay" style:height="{grenadeCooldownPct}%"></div>
+      {/if}
+    </div>
+    {#each Array(2) as _, i}
       <div class="action-slot locked">
-        <div class="slot-key">{i + 3}</div>
+        <div class="slot-key">{i + 4}</div>
       </div>
     {/each}
   </div>
@@ -84,6 +97,7 @@
     <div><span class="key">Click</span> Select NPC</div>
     <div><span class="key">F</span> Throw phone</div>
     <div><span class="key">2</span> Net (draw, then swoop)</div>
+    <div><span class="key">3</span> Grenade (AoE)</div>
     <div><span class="key">Esc</span> Game menu</div>
   </div>
 </div>

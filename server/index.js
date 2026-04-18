@@ -1,6 +1,6 @@
 import { WebSocketServer } from "ws";
-import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, swoopKill } from "./npcs.js";
-import { NET_RANGE } from "../src/config.js";
+import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, killNpc } from "./npcs.js";
+import { NET_RANGE, GRENADE_RANGE, GRENADE_FUSE, GRENADE_EXPLOSION_RADIUS } from "../src/config.js";
 import { NPC_RESPAWN_DELAY } from "../src/config.js";
 
 const PORT = 3001;
@@ -13,6 +13,7 @@ const npcs = createNpcs();
 let nextId = 1;
 let nextNpcIndex = npcs.length;
 const respawnQueue = []; // { timer, index }
+const pendingGrenades = []; // { timer, x, z, attackerId }
 
 wss.on("connection", (ws) => {
   let playerId = null;
@@ -146,7 +147,7 @@ wss.on("connection", (ws) => {
       const dz = npc.z - player.z;
       if (dx * dx + dz * dz > NET_RANGE * NET_RANGE) return;
 
-      const result = swoopKill(npc);
+      const result = killNpc(npc);
       if (!result) return;
 
       broadcast({
@@ -166,6 +167,37 @@ wss.on("connection", (ws) => {
       // Auto-unequip after swoop
       player.netEquipped = false;
       broadcast({ type: "playerNetEquipped", id: playerId, equipped: false });
+    }
+
+    if (msg.type === "grenade" && playerId) {
+      const npc = npcs.find(n => n.id === msg.npcId);
+      if (!npc || npc.state === "dead") return;
+      const player = players.get(playerId);
+      if (!player) return;
+
+      const dx = npc.x - player.x;
+      const dz = npc.z - player.z;
+      if (dx * dx + dz * dz > GRENADE_RANGE * GRENADE_RANGE) return;
+
+      const targetX = npc.x;
+      const targetZ = npc.z;
+
+      pendingGrenades.push({
+        timer: GRENADE_FUSE,
+        x: targetX,
+        z: targetZ,
+        attackerId: playerId,
+      });
+
+      broadcast({
+        type: "grenadeThrown",
+        attackerId: playerId,
+        startX: player.x,
+        startY: player.y,
+        startZ: player.z,
+        targetX,
+        targetZ,
+      });
     }
 
     if (msg.type === "levelUp" && playerId) {
@@ -212,6 +244,25 @@ setInterval(() => {
       npcs.splice(i, 1);
       respawnQueue.push({ timer: NPC_RESPAWN_DELAY, name: removed.name, id: removed.id });
       console.log(`NPC "${removed.name}" despawned after death. Respawning in ${NPC_RESPAWN_DELAY}s.`);
+    }
+  }
+
+  // Process pending grenades — detonate when fuse runs out
+  for (let i = pendingGrenades.length - 1; i >= 0; i--) {
+    pendingGrenades[i].timer -= tickDt;
+    if (pendingGrenades[i].timer > 0) continue;
+
+    const g = pendingGrenades[i];
+    pendingGrenades.splice(i, 1);
+
+    const radiusSq = GRENADE_EXPLOSION_RADIUS * GRENADE_EXPLOSION_RADIUS;
+    for (const npc of npcs) {
+      const dx = npc.x - g.x;
+      const dz = npc.z - g.z;
+      if (dx * dx + dz * dz > radiusSq) continue;
+      if (killNpc(npc)) {
+        broadcast({ type: "npcDied", npcId: npc.id, killerId: g.attackerId });
+      }
     }
   }
 

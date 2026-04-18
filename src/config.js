@@ -107,6 +107,16 @@ export const SWOOP_DURATION = 1.2;
 export const SWOOP_LIFT_HEIGHT = 3.0;
 
 // =============================================================================
+// Grenade (slot 3)
+// =============================================================================
+export const GRENADE_RANGE = 12;
+export const GRENADE_COOLDOWN = 8.0;
+export const GRENADE_FUSE = 1.8;
+export const GRENADE_EXPLOSION_RADIUS = 4.0;
+export const GRENADE_ARC_HEIGHT = 5.0;
+export const GRENADE_EXPLOSION_DURATION = 0.8;
+
+// =============================================================================
 // XP / Leveling
 // =============================================================================
 export const XP_PER_KILL = 500;

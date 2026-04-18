@@ -55,7 +55,7 @@ export function shouldDespawn(npc) {
   return npc.state === "dead" && (npc.deathTimer || 0) >= NPC_DESPAWN_DELAY;
 }
 
-export function swoopKill(npc) {
+export function killNpc(npc) {
   if (npc.state === "dead") return null;
   npc.state = "dead";
   npc.anim = "dead";
