@@ -42,5 +42,8 @@ body {
 }
 
 #game.aiming {
-  cursor: crosshair;
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><circle cx='16' cy='16' r='10' fill='none' stroke='black' stroke-opacity='0.55' stroke-width='3.5'/><circle cx='16' cy='16' r='10' fill='none' stroke='white' stroke-width='1.6'/><circle cx='16' cy='16' r='2.4' fill='white' stroke='black' stroke-opacity='0.6' stroke-width='0.8'/></svg>")
+    16 16,
+    crosshair;
 }
