@@ -18,6 +18,8 @@ import {
   PLANE_BOUNDS_MARGIN,
   PLANE_CAMERA_OFFSET_Y,
   PLANE_CAMERA_OFFSET_Z,
+  PLANE_AIM_OFFSET_Y,
+  PLANE_AIM_DISTANCE,
   FIELD_SIZE,
 } from "../config.js";
 
@@ -274,8 +276,9 @@ export class Plane {
     const offset = new Vector3(0, PLANE_CAMERA_OFFSET_Y, PLANE_CAMERA_OFFSET_Z).applyQuaternion(this.root.quaternion);
     camera.position.copy(this.root.position).add(offset);
     camera.up.set(0, 1, 0);
-    // Look slightly ahead of the plane along its forward axis
-    const lookOffset = new Vector3(0, 0, -3).applyQuaternion(this.root.quaternion);
+    // Look at a point ahead of and above the plane so the centered crosshair
+    // sits above the model rather than on it.
+    const lookOffset = new Vector3(0, PLANE_AIM_OFFSET_Y, -PLANE_AIM_DISTANCE).applyQuaternion(this.root.quaternion);
     camera.lookAt(this.root.position.clone().add(lookOffset));
   }
 

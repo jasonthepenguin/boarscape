@@ -127,8 +127,10 @@ export const PLANE_AUTOPILOT_DURATION = 3.0;
 export const PLANE_MIN_Y = 0.3;
 export const PLANE_MAX_Y = 50;
 export const PLANE_BOUNDS_MARGIN = 4;
-export const PLANE_CAMERA_OFFSET_Y = 2.0;
+export const PLANE_CAMERA_OFFSET_Y = 3.0;
 export const PLANE_CAMERA_OFFSET_Z = 6.0;
+export const PLANE_AIM_OFFSET_Y = 1.4;   // crosshair sits above the plane
+export const PLANE_AIM_DISTANCE = 4.0;   // how far ahead the aim point is
 
 // =============================================================================
 // XP / Leveling
