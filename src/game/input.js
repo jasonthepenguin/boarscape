@@ -34,7 +34,7 @@ export class InputManager {
       if (e.code === "Space" && !e.repeat) {
         this._jumpPressed = true;
       }
-      if (e.code === "KeyF" && !e.repeat) {
+      if (e.code === "Digit1" && !e.repeat) {
         this._attackPressed = true;
       }
       if (e.code === "Digit2" && !e.repeat) {

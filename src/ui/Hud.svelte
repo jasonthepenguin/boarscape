@@ -37,7 +37,7 @@
 
   <div class="action-bar">
     <div class="action-slot active" class:ready={canAttack}>
-      <div class="slot-key">F</div>
+      <div class="slot-key">1</div>
       <div class="slot-icon">📱</div>
       {#if cooldownPct > 0}
         <div class="cooldown-overlay" style:height="{cooldownPct}%"></div>
@@ -82,7 +82,7 @@
     <div><span class="key">Mouse drag</span> Rotate camera</div>
     <div><span class="key">Wheel</span> Zoom</div>
     <div><span class="key">Click</span> Select NPC</div>
-    <div><span class="key">F</span> Throw phone</div>
+    <div><span class="key">1</span> Throw phone (target needed)</div>
     <div><span class="key">2</span> then click — grenade</div>
     <div><span class="key">Esc</span> Game menu</div>
   </div>
