@@ -99,15 +99,7 @@ export const SELECTION_RING_TUBE = 0.03;
 export const ACTION_BAR_SLOTS = 5;
 
 // =============================================================================
-// Net / Swoop (slot 2)
-// =============================================================================
-export const NET_RANGE = 5;
-export const NET_COOLDOWN = 3.0;
-export const SWOOP_DURATION = 1.2;
-export const SWOOP_LIFT_HEIGHT = 3.0;
-
-// =============================================================================
-// Grenade (slot 3)
+// Grenade (slot 2)
 // =============================================================================
 export const GRENADE_RANGE = 12;
 export const GRENADE_COOLDOWN = 8.0;

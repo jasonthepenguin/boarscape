@@ -14,9 +14,6 @@ export const loading = {
 // Action bar state
 let _cooldownRemaining = $state(0);
 let _cooldownTotal = $state(0);
-let _netCooldownRemaining = $state(0);
-let _netCooldownTotal = $state(0);
-let _netEquipped = $state(false);
 let _grenadeCooldownRemaining = $state(0);
 let _grenadeCooldownTotal = $state(0);
 let _selectedNpcId = $state(null);
@@ -26,12 +23,6 @@ export const actionBar = {
   set cooldownRemaining(v) { _cooldownRemaining = v; },
   get cooldownTotal() { return _cooldownTotal; },
   set cooldownTotal(v) { _cooldownTotal = v; },
-  get netCooldownRemaining() { return _netCooldownRemaining; },
-  set netCooldownRemaining(v) { _netCooldownRemaining = v; },
-  get netCooldownTotal() { return _netCooldownTotal; },
-  set netCooldownTotal(v) { _netCooldownTotal = v; },
-  get netEquipped() { return _netEquipped; },
-  set netEquipped(v) { _netEquipped = v; },
   get grenadeCooldownRemaining() { return _grenadeCooldownRemaining; },
   set grenadeCooldownRemaining(v) { _grenadeCooldownRemaining = v; },
   get grenadeCooldownTotal() { return _grenadeCooldownTotal; },
@@ -68,9 +59,6 @@ export function resetUiState() {
   _loadingText = null;
   _cooldownRemaining = 0;
   _cooldownTotal = 0;
-  _netCooldownRemaining = 0;
-  _netCooldownTotal = 0;
-  _netEquipped = false;
   _grenadeCooldownRemaining = 0;
   _grenadeCooldownTotal = 0;
   _selectedNpcId = null;

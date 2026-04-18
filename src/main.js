@@ -10,9 +10,8 @@ import { loadPlayer, createLevelUpAura, updateNametag } from "./game/player.js";
 import { RemotePlayerManager } from "./game/remotePlayers.js";
 import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
-import { NetManager } from "./game/netManager.js";
 import { GrenadeManager } from "./game/grenadeProjectile.js";
-import { ATTACK_COOLDOWN, ATTACK_RANGE, NET_COOLDOWN, NET_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
+import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
 import { Raycaster, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
@@ -40,18 +39,15 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const remotePlayers = new RemotePlayerManager(scene, modelUrl);
   const npcManager = new NpcManager(scene);
   const phoneProjectiles = new PhoneProjectileManager(scene);
-  const netManager = new NetManager(scene);
   const grenadeManager = new GrenadeManager(scene);
 
   // Raycaster for NPC click selection
   const raycaster = new Raycaster();
   const pointerNdc = new Vector2();
   let attackCooldown = 0;
-  let netCooldown = 0;
   let grenadeCooldown = 0;
   let levelUpAura = null;
   let wasMenuOpen = false;
-  let localNetEquipped = false;
 
   // XP / leveling helpers
   function cumulativeXpForLevel(level) {
@@ -114,12 +110,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   // Spawn existing players that were already on the server
   for (const p of existingPlayers) {
-    remotePlayers.addPlayer(p.id, p.name, p.color, p.level ?? 1).then(() => {
-      if (p.netEquipped) {
-        const root = remotePlayers.getRoot(p.id);
-        if (root) netManager.equip(root);
-      }
-    });
+    remotePlayers.addPlayer(p.id, p.name, p.color, p.level ?? 1);
   }
 
   // Spawn NPCs that are already on the server
@@ -132,26 +123,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   // Wire up network events
   network.onPlayerJoined = (msg) => {
-    remotePlayers.addPlayer(msg.id, msg.name, msg.color, msg.level ?? 1).then(() => {
-      if (msg.netEquipped) {
-        const root = remotePlayers.getRoot(msg.id);
-        if (root) netManager.equip(root);
-      }
-    });
+    remotePlayers.addPlayer(msg.id, msg.name, msg.color, msg.level ?? 1);
   };
   network.onPlayerLeft = (msg) => {
-    const root = remotePlayers.getRoot(msg.id);
-    if (root) netManager.unequip(root);
     remotePlayers.removePlayer(msg.id);
   };
   network.onPlayerLevelUp = (msg) => {
     remotePlayers.setLevel(msg.id, msg.level);
-  };
-  network.onPlayerNetEquipped = (msg) => {
-    const root = remotePlayers.getRoot(msg.id);
-    if (!root) return;
-    if (msg.equipped) netManager.equip(root);
-    else netManager.unequip(root);
   };
   network.onGrenadeThrown = (msg) => {
     // Attacker already spawned locally on press. Observers spawn here.
@@ -196,16 +174,6 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   };
   network.onNpcSpawned = (msg) => {
     npcManager.addNpc(msg.npc.id, msg.npc.name);
-  };
-  network.onNpcSwooped = (msg) => {
-    // We already triggered our own swoop animation locally on press.
-    // For other players' swoops, animate from their remote model.
-    if (msg.attackerId === network.playerId) return;
-    const attackerRoot = remotePlayers.getRoot(msg.attackerId);
-    const npc = npcManager.npcs.get(msg.npcId);
-    if (attackerRoot && npc?.root) {
-      netManager.swoop(attackerRoot, npc.root);
-    }
   };
 
   // NPC selection via click
@@ -292,7 +260,6 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     remotePlayers.update(dt);
     npcManager.update(dt);
     phoneProjectiles.update(dt);
-    netManager.update(dt);
     grenadeManager.update(dt);
     if (levelUpAura && !levelUpAura.done) levelUpAura.update(dt);
 
@@ -301,13 +268,6 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       attackCooldown -= dt;
       if (attackCooldown < 0) attackCooldown = 0;
       actionBar.cooldownRemaining = attackCooldown;
-    }
-
-    // Net cooldown
-    if (netCooldown > 0) {
-      netCooldown -= dt;
-      if (netCooldown < 0) netCooldown = 0;
-      actionBar.netCooldownRemaining = netCooldown;
     }
 
     // Grenade cooldown
@@ -351,45 +311,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       }
     }
 
-    // Handle 2 key: first press equips net, second press with valid target swoops + kills.
-    if (!gameMenu.open && input.wasNetPressed() && player?.root && netCooldown <= 0) {
-      const npcId = npcManager.selectedNpcId;
-      let didSwoop = false;
-
-      if (localNetEquipped && npcId) {
-        const targetPos = npcManager.getNpcWorldPosition(npcId);
-        if (targetPos) {
-          const playerPos = player.root.position;
-          const dist = Math.sqrt(
-            (targetPos.x - playerPos.x) ** 2 + (targetPos.z - playerPos.z) ** 2
-          );
-          if (dist <= NET_RANGE) {
-            const npc = npcManager.npcs.get(npcId);
-            if (npc?.root) {
-              netManager.swoop(player.root, npc.root);
-              network.sendSwoop(npcId);
-              localNetEquipped = false;
-              actionBar.netEquipped = false;
-              netCooldown = NET_COOLDOWN;
-              actionBar.netCooldownRemaining = NET_COOLDOWN;
-              actionBar.netCooldownTotal = NET_COOLDOWN;
-              didSwoop = true;
-            }
-          }
-        }
-      }
-
-      if (!didSwoop) {
-        // Toggle equip state
-        localNetEquipped = !localNetEquipped;
-        actionBar.netEquipped = localNetEquipped;
-        if (localNetEquipped) netManager.equip(player.root);
-        else netManager.unequip(player.root);
-        network.sendNetEquipped(localNetEquipped);
-      }
-    }
-
-    // Handle 3 key for grenade
+    // Handle 2 key for grenade
     if (!gameMenu.open && input.wasGrenadePressed() && npcManager.selectedNpcId && grenadeCooldown <= 0 && player?.root) {
       const npcId = npcManager.selectedNpcId;
       const targetPos = npcManager.getNpcWorldPosition(npcId);

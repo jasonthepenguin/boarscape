@@ -9,18 +9,12 @@
       ? (actionBar.cooldownRemaining / actionBar.cooldownTotal) * 100
       : 0
   );
-  let netCooldownPct = $derived(
-    actionBar.netCooldownTotal > 0
-      ? (actionBar.netCooldownRemaining / actionBar.netCooldownTotal) * 100
-      : 0
-  );
   let grenadeCooldownPct = $derived(
     actionBar.grenadeCooldownTotal > 0
       ? (actionBar.grenadeCooldownRemaining / actionBar.grenadeCooldownTotal) * 100
       : 0
   );
   let canAttack = $derived(actionBar.cooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
-  let canNet = $derived(actionBar.netCooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
   let canGrenade = $derived(actionBar.grenadeCooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
   let xpPct = $derived(
     playerStats.xpForNextLevel > 0
@@ -49,23 +43,16 @@
         <div class="cooldown-overlay" style:height="{cooldownPct}%"></div>
       {/if}
     </div>
-    <div class="action-slot active" class:ready={canNet} class:equipped={actionBar.netEquipped}>
-      <div class="slot-key">2</div>
-      <div class="slot-icon">🪤</div>
-      {#if netCooldownPct > 0}
-        <div class="cooldown-overlay" style:height="{netCooldownPct}%"></div>
-      {/if}
-    </div>
     <div class="action-slot active" class:ready={canGrenade}>
-      <div class="slot-key">3</div>
+      <div class="slot-key">2</div>
       <div class="slot-icon">💣</div>
       {#if grenadeCooldownPct > 0}
         <div class="cooldown-overlay" style:height="{grenadeCooldownPct}%"></div>
       {/if}
     </div>
-    {#each Array(2) as _, i}
+    {#each Array(3) as _, i}
       <div class="action-slot locked">
-        <div class="slot-key">{i + 4}</div>
+        <div class="slot-key">{i + 3}</div>
       </div>
     {/each}
   </div>
@@ -96,8 +83,7 @@
     <div><span class="key">Wheel</span> Zoom</div>
     <div><span class="key">Click</span> Select NPC</div>
     <div><span class="key">F</span> Throw phone</div>
-    <div><span class="key">2</span> Net (draw, then swoop)</div>
-    <div><span class="key">3</span> Grenade (AoE)</div>
+    <div><span class="key">2</span> Grenade (AoE)</div>
     <div><span class="key">Esc</span> Game menu</div>
   </div>
 </div>
@@ -188,15 +174,6 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.1),
       0 2px 4px rgba(0, 0, 0, 0.5),
       0 0 8px rgba(255, 215, 0, 0.3);
-  }
-
-  .action-slot.active.equipped {
-    border-color: #f5e6a8;
-    background: linear-gradient(180deg, #6b5420 0%, #4a3810 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.2),
-      0 2px 4px rgba(0, 0, 0, 0.5),
-      0 0 12px rgba(245, 230, 168, 0.6);
   }
 
   .action-slot.locked {

@@ -4,7 +4,6 @@ export class InputManager {
     this._keysDown = new Set();
     this._jumpPressed = false;
     this._attackPressed = false;
-    this._netPressed = false;
     this._grenadePressed = false;
 
     // Pointer drag state
@@ -34,9 +33,6 @@ export class InputManager {
         this._attackPressed = true;
       }
       if (e.code === "Digit2" && !e.repeat) {
-        this._netPressed = true;
-      }
-      if (e.code === "Digit3" && !e.repeat) {
         this._grenadePressed = true;
       }
     };
@@ -125,14 +121,6 @@ export class InputManager {
     return false;
   }
 
-  wasNetPressed() {
-    if (this._netPressed) {
-      this._netPressed = false;
-      return true;
-    }
-    return false;
-  }
-
   wasGrenadePressed() {
     if (this._grenadePressed) {
       this._grenadePressed = false;
@@ -164,7 +152,6 @@ export class InputManager {
   clearTransientInputs() {
     this._jumpPressed = false;
     this._attackPressed = false;
-    this._netPressed = false;
     this._grenadePressed = false;
     this._clickEvent = null;
     this._pointerDx = 0;

@@ -113,10 +113,6 @@ export class RemotePlayerManager {
     updateNametag(player.nametag, player.name, level);
   }
 
-  getRoot(id) {
-    return this.players.get(id)?.root ?? null;
-  }
-
   removePlayer(id) {
     const player = this.players.get(id);
     if (!player) return;
