@@ -13,7 +13,7 @@ import { PhoneProjectileManager } from "./game/phoneProjectile.js";
 import { GrenadeManager, GrenadeAimer } from "./game/grenadeProjectile.js";
 import { Plane } from "./game/plane.js";
 import { BulletManager } from "./game/planeBullets.js";
-import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, PLANE_INTERACT_RADIUS, PLANE_SPAWN_X, PLANE_SPAWN_Y, PLANE_SPAWN_Z, BULLET_FIRE_INTERVAL, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
+import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, PLANE_INTERACT_RADIUS, PLANE_SPAWN_X, PLANE_SPAWN_Y, PLANE_SPAWN_Z, BULLET_FIRE_INTERVAL, BULLET_CONVERGE_DISTANCE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
 import { DoubleSide, Mesh, MeshBasicMaterial, Plane as ThreePlane, Raycaster, TorusGeometry, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
@@ -501,14 +501,19 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
         network.sendPlaneState(newState);
       }
 
-      // Hold RMB to fire alternating wing-tip tracers
+      // Hold RMB to fire alternating wing-tip tracers — both aimed at a
+      // convergence point along the crosshair direction (camera forward)
       bulletFireTimer = Math.max(0, bulletFireTimer - dt);
       if (input.isRmbDown() && bulletFireTimer <= 0) {
+        const cameraForward = new Vector3();
+        camera.getWorldDirection(cameraForward);
+        const aimPoint = camera.position.clone().addScaledVector(cameraForward, BULLET_CONVERGE_DISTANCE);
+
         const wingX = bulletWingToggle === 0 ? -2.5 : 2.5;
         const localOrigin = new Vector3(wingX, 0.3, -0.3);
         const worldOrigin = localOrigin.applyMatrix4(plane.root.matrixWorld);
-        const forward = new Vector3(0, 0, -1).applyQuaternion(plane.root.quaternion);
-        bullets.spawn(worldOrigin, forward);
+        const direction = aimPoint.sub(worldOrigin).normalize();
+        bullets.spawn(worldOrigin, direction);
         bulletWingToggle = 1 - bulletWingToggle;
         bulletFireTimer = BULLET_FIRE_INTERVAL;
       }

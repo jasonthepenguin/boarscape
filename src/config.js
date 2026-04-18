@@ -127,10 +127,13 @@ export const PLANE_AUTOPILOT_DURATION = 3.0;
 export const PLANE_MIN_Y = 0.3;
 export const PLANE_MAX_Y = 50;
 export const PLANE_BOUNDS_MARGIN = 4;
-export const PLANE_CAMERA_OFFSET_Y = 3.0;
+export const PLANE_CAMERA_OFFSET_Y = 1.5;
 export const PLANE_CAMERA_OFFSET_Z = 6.0;
-export const PLANE_AIM_OFFSET_Y = 0;     // keep crosshair on the plane's flight axis
-export const PLANE_AIM_DISTANCE = 8.0;   // far enough ahead that the lookAt is stable
+// Aim offset MUST equal camera offset Y so the camera's forward direction is
+// parallel to the plane's nose — that way the crosshair, the bullets, and the
+// flight path all line up exactly.
+export const PLANE_AIM_OFFSET_Y = 1.5;
+export const PLANE_AIM_DISTANCE = 12.0;
 
 // Plane bullets (RMB hold while flying)
 export const NPC_MAX_HP = 100;
@@ -139,6 +142,7 @@ export const BULLET_FIRE_INTERVAL = 0.1;  // seconds between shots
 export const BULLET_SPEED = 70;
 export const BULLET_LIFETIME = 1.4;
 export const BULLET_HIT_RADIUS = 0.85;
+export const BULLET_CONVERGE_DISTANCE = 50; // wing-tip tracers aim at a point along the crosshair direction
 
 // =============================================================================
 // XP / Leveling
