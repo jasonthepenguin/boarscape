@@ -16,6 +16,7 @@ export class NetworkManager {
     this.onPlanePilot = null;
     this.onPlaneRespawned = null;
     this.onPlaneState = null;
+    this.onNpcDamaged = null;
   }
 
   connect(name, color) {
@@ -54,6 +55,8 @@ export class NetworkManager {
           this.onPlayerLevelUp?.(msg);
         } else if (msg.type === "grenadeThrown") {
           this.onGrenadeThrown?.(msg);
+        } else if (msg.type === "npcDamaged") {
+          this.onNpcDamaged?.(msg);
         } else if (msg.type === "planePilot") {
           this.onPlanePilot?.(msg);
         } else if (msg.type === "planeRespawned") {
@@ -131,5 +134,6 @@ export class NetworkManager {
     this.onPlanePilot = null;
     this.onPlaneRespawned = null;
     this.onPlaneState = null;
+    this.onNpcDamaged = null;
   }
 }

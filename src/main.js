@@ -195,6 +195,9 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     if (n.addiction > 0) {
       npcManager.setAddiction(n.id, n.addiction);
     }
+    if (n.hp !== undefined) {
+      npcManager.setHp(n.id, n.hp);
+    }
   }
 
   // Wire up network events
@@ -281,6 +284,9 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     if (msg.killerId === network.playerId) {
       addXp(XP_PER_KILL);
     }
+  };
+  network.onNpcDamaged = (msg) => {
+    npcManager.setHp(msg.npcId, msg.hp);
   };
   network.onNpcRemoved = (msg) => {
     npcManager.removeNpc(msg.npcId);
