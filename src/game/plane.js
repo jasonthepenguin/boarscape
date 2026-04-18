@@ -7,11 +7,18 @@ import {
   Vector3,
 } from "three";
 import {
-  PLANE_FORWARD_SPEED,
+  PLANE_MAX_SPEED,
+  PLANE_THROTTLE_ACCEL,
+  PLANE_THROTTLE_DECEL,
+  PLANE_THROTTLE_DRAG,
   PLANE_PITCH_SPEED,
   PLANE_YAW_SPEED,
+  PLANE_MIN_Y,
+  PLANE_MAX_Y,
+  PLANE_BOUNDS_MARGIN,
   PLANE_CAMERA_OFFSET_Y,
   PLANE_CAMERA_OFFSET_Z,
+  FIELD_SIZE,
 } from "../config.js";
 
 const FUSELAGE_LENGTH = 3.2;
@@ -123,7 +130,9 @@ export class Plane {
     // Velocity is only used by the local pilot (sent on exit so the server
     // can autopilot). Stored as a Vector3 for convenience.
     this.velocity = new Vector3();
+    this.speed = 0; // current throttle speed for the local pilot
     this._propSpin = 0;
+    this.rider = null; // boar root currently seated in the cockpit
 
     // Interpolation state (when not piloting locally we tween to server state)
     this._prev = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
@@ -155,23 +164,74 @@ export class Plane {
   setPilot(pilotId, localPlayerId) {
     this.pilotId = pilotId;
     this.isLocalPilot = pilotId !== null && pilotId === localPlayerId;
+    if (!pilotId) {
+      // Reset throttle whenever the cockpit empties so the next pilot
+      // doesn't inherit a moving plane.
+      this.speed = 0;
+    }
+  }
+
+  /**
+   * Reparent a boar root into the plane's cockpit so the model is visible
+   * while flying. Call detachRider() before exit.
+   */
+  attachRider(boarRoot) {
+    if (!boarRoot || this.rider === boarRoot) return;
+    if (this.rider) this.detachRider();
+    this.root.add(boarRoot);
+    boarRoot.position.set(0, 0.15, -0.05);
+    boarRoot.rotation.set(0, Math.PI, 0);
+    boarRoot.scale.setScalar(0.5);
+    boarRoot.visible = true;
+    this.rider = boarRoot;
+  }
+
+  detachRider() {
+    if (!this.rider) return null;
+    const r = this.rider;
+    this.rider = null;
+    return r;
   }
 
   /** Flight physics under the local pilot. Returns the new state. */
   flyLocal(input, dt) {
-    const pitch = (input.isKeyDown("KeyS") ? 1 : 0) - (input.isKeyDown("KeyW") ? 1 : 0);
+    // Throttle (W/S)
+    if (input.isKeyDown("KeyW")) {
+      this.speed = Math.min(PLANE_MAX_SPEED, this.speed + PLANE_THROTTLE_ACCEL * dt);
+    } else if (input.isKeyDown("KeyS")) {
+      this.speed = Math.max(0, this.speed - PLANE_THROTTLE_DECEL * dt);
+    } else {
+      this.speed = Math.max(0, this.speed - PLANE_THROTTLE_DRAG * dt);
+    }
+
+    // Pitch (Arrow Up/Down) — Up = climb (nose up), Down = dive
+    const pitch = (input.isKeyDown("ArrowUp") ? 1 : 0) - (input.isKeyDown("ArrowDown") ? 1 : 0);
+    // Yaw (A/D)
     const yaw = (input.isKeyDown("KeyA") ? 1 : 0) - (input.isKeyDown("KeyD") ? 1 : 0);
 
-    // Apply pitch around local X (wing axis), yaw around local Y (vertical)
     if (pitch !== 0) this.root.rotateX(pitch * PLANE_PITCH_SPEED * dt);
     if (yaw !== 0) this.root.rotateY(yaw * PLANE_YAW_SPEED * dt);
 
     // Forward velocity in local -Z direction (nose)
     const forward = new Vector3(0, 0, -1).applyQuaternion(this.root.quaternion);
-    this.velocity.copy(forward).multiplyScalar(PLANE_FORWARD_SPEED);
+    this.velocity.copy(forward).multiplyScalar(this.speed);
     this.root.position.addScaledVector(this.velocity, dt);
 
-    this._propSpin -= dt * 30;
+    // Clamp to world bounds + altitude limits
+    const limit = FIELD_SIZE / 2 - PLANE_BOUNDS_MARGIN;
+    const before = { x: this.root.position.x, z: this.root.position.z };
+    this.root.position.x = Math.max(-limit, Math.min(limit, this.root.position.x));
+    this.root.position.z = Math.max(-limit, Math.min(limit, this.root.position.z));
+    this.root.position.y = Math.max(PLANE_MIN_Y, Math.min(PLANE_MAX_Y, this.root.position.y));
+    // If we hit a wall this frame, kill forward speed so we don't grind into it
+    if (this.root.position.x !== before.x || this.root.position.z !== before.z) {
+      this.speed = 0;
+      this.velocity.set(0, 0, 0);
+    }
+
+    // Propeller spins faster as throttle climbs
+    const spinRate = 6 + (this.speed / PLANE_MAX_SPEED) * 30;
+    this._propSpin -= dt * spinRate;
     this.propeller.rotation.z = this._propSpin;
 
     return {

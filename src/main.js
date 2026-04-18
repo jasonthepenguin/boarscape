@@ -168,7 +168,12 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
 
   // Spawn existing players that were already on the server
   for (const p of existingPlayers) {
-    remotePlayers.addPlayer(p.id, p.name, p.color, p.level ?? 1);
+    remotePlayers.addPlayer(p.id, p.name, p.color, p.level ?? 1).then(() => {
+      if (plane.pilotId === p.id && p.id !== network.playerId) {
+        const r = remotePlayers.getRoot(p.id);
+        if (r) plane.attachRider(r);
+      }
+    });
   }
 
   // Spawn NPCs that are already on the server
@@ -181,9 +186,19 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
 
   // Wire up network events
   network.onPlayerJoined = (msg) => {
-    remotePlayers.addPlayer(msg.id, msg.name, msg.color, msg.level ?? 1);
+    remotePlayers.addPlayer(msg.id, msg.name, msg.color, msg.level ?? 1).then(() => {
+      if (plane.pilotId === msg.id && msg.id !== network.playerId) {
+        const r = remotePlayers.getRoot(msg.id);
+        if (r) plane.attachRider(r);
+      }
+    });
   };
   network.onPlayerLeft = (msg) => {
+    // If the leaving player was seated in the plane, clear the rider ref
+    const root = remotePlayers.getRoot(msg.id);
+    if (root && plane.rider === root) {
+      plane.detachRider();
+    }
     remotePlayers.removePlayer(msg.id);
   };
   network.onPlayerLevelUp = (msg) => {
@@ -200,10 +215,24 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     plane.receiveState(state.x, state.y, state.z, state.rx, state.ry, state.rz);
   };
   network.onPlanePilot = (msg) => {
+    const oldPilotId = plane.pilotId;
     plane.setPilot(msg.pilotId, network.playerId);
-    // If we lost pilot status (e.g. server kicked us out), reset local UI
+
+    // If we lost pilot status (server kicked us out), reset local UI
     if (planeUi.inPlane && msg.pilotId !== network.playerId) {
       exitPlaneLocally(false);
+    }
+
+    // Handle a remote pilot leaving the plane
+    if (oldPilotId && oldPilotId !== msg.pilotId && oldPilotId !== network.playerId) {
+      const oldRoot = remotePlayers.getRoot(oldPilotId);
+      if (oldRoot) unseatBoarToGround(oldRoot);
+    }
+
+    // Handle a remote pilot entering the plane
+    if (msg.pilotId && msg.pilotId !== oldPilotId && msg.pilotId !== network.playerId) {
+      const newRoot = remotePlayers.getRoot(msg.pilotId);
+      if (newRoot) plane.attachRider(newRoot);
     }
   };
   network.onPlaneRespawned = (msg) => {
@@ -329,6 +358,20 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
   // ---- Plane interaction ----
   let planeStateSendTimer = 0;
 
+  // Drop a boar (local or remote) out of the plane back onto the ground.
+  // If `boarRoot` is currently a child of the plane it gets reparented to the
+  // scene first so its world position is preserved.
+  function unseatBoarToGround(boarRoot) {
+    if (!boarRoot) return;
+    if (boarRoot.parent === plane.root) {
+      scene.add(boarRoot);
+    }
+    boarRoot.position.set(plane.root.position.x, env.groundY ?? 0, plane.root.position.z);
+    boarRoot.rotation.set(0, 0, 0);
+    boarRoot.scale.setScalar(1);
+    boarRoot.visible = true;
+  }
+
   function enterPlaneLocally() {
     if (!player?.root || planeUi.inPlane) return;
     if (plane.pilotId && plane.pilotId !== network.playerId) return; // someone else is flying
@@ -337,8 +380,9 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     setGrenadeArmed(false);
     npcManager.deselectNpc();
     actionBar.selectedNpcId = null;
-    // Hide local boar visually so the camera shot is clean
-    player.root.visible = false;
+    // Seat boar inside the cockpit so the model is visible while flying
+    player.stopAnimation?.("walk");
+    plane.attachRider(player.root);
     // Tell the server we're claiming the cockpit; locally take pilot role now
     plane.setPilot(network.playerId, network.playerId);
     network.sendEnterPlane();
@@ -347,16 +391,16 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
   function exitPlaneLocally(notifyServer = true) {
     if (!planeUi.inPlane) return;
     planeUi.inPlane = false;
-    if (player?.root) {
-      // Drop the boar at the plane's current XZ on the ground
-      const pp = plane.root.position;
-      player.root.position.set(pp.x, env.groundY ?? 0, pp.z);
-      player.root.visible = true;
-      if (player.controller) {
-        player.controller.velocity.x = 0;
-        player.controller.velocity.y = 0;
-        player.controller.velocity.z = 0;
-      }
+    const rider = plane.detachRider();
+    if (rider) {
+      unseatBoarToGround(rider);
+    } else if (player?.root) {
+      unseatBoarToGround(player.root);
+    }
+    if (player?.controller) {
+      player.controller.velocity.x = 0;
+      player.controller.velocity.y = 0;
+      player.controller.velocity.z = 0;
     }
     if (notifyServer) {
       const v = plane.getCurrentVelocity();

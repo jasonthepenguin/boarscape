@@ -113,10 +113,16 @@ export class RemotePlayerManager {
     updateNametag(player.nametag, player.name, level);
   }
 
+  getRoot(id) {
+    return this.players.get(id)?.root ?? null;
+  }
+
   removePlayer(id) {
     const player = this.players.get(id);
     if (!player) return;
-    this.scene.remove(player.root);
+    // Use parent.remove rather than scene.remove — remote boars may be
+    // reparented (e.g. seated inside the plane).
+    player.root.parent?.remove(player.root);
     player.mixer?.stopAllAction();
     this.players.delete(id);
   }

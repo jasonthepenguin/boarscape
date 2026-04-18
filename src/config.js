@@ -115,11 +115,16 @@ export const PLANE_SPAWN_X = 7;
 export const PLANE_SPAWN_Y = 0.55;
 export const PLANE_SPAWN_Z = 0;
 export const PLANE_INTERACT_RADIUS = 5;
-export const PLANE_FORWARD_SPEED = 22;
+export const PLANE_MAX_SPEED = 28;
+export const PLANE_THROTTLE_ACCEL = 14;   // m/s^2 while W is held
+export const PLANE_THROTTLE_DECEL = 18;   // m/s^2 while S is held
+export const PLANE_THROTTLE_DRAG = 4;     // m/s^2 passive decel when no input
 export const PLANE_PITCH_SPEED = 1.0;
 export const PLANE_YAW_SPEED = 0.9;
 export const PLANE_AUTOPILOT_DURATION = 3.0;
 export const PLANE_MIN_Y = 0.3;
+export const PLANE_MAX_Y = 50;
+export const PLANE_BOUNDS_MARGIN = 4;
 export const PLANE_CAMERA_OFFSET_Y = 2.0;
 export const PLANE_CAMERA_OFFSET_Z = 6.0;
 

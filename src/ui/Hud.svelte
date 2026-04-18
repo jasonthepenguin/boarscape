@@ -40,7 +40,7 @@
   {/if}
 
   {#if planeUi.inPlane}
-    <div class="plane-prompt"><span class="key">E</span> Exit plane &nbsp;·&nbsp; <span class="key">W</span>/<span class="key">S</span> pitch &nbsp;·&nbsp; <span class="key">A</span>/<span class="key">D</span> yaw</div>
+    <div class="plane-prompt"><span class="key">E</span> Exit &nbsp;·&nbsp; <span class="key">W</span>/<span class="key">S</span> throttle &nbsp;·&nbsp; <span class="key">A</span>/<span class="key">D</span> yaw &nbsp;·&nbsp; <span class="key">↑</span>/<span class="key">↓</span> pitch</div>
   {/if}
 
   {#if !planeUi.inPlane}
