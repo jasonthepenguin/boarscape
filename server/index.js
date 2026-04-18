@@ -332,7 +332,7 @@ setInterval(() => {
       broadcast({ type: "npcRemoved", npcId: removed.id });
       npcs.splice(i, 1);
       respawnQueue.push({ timer: NPC_RESPAWN_DELAY, name: removed.name, id: removed.id });
-      console.log(`NPC "${removed.name}" despawned after death. Respawning in ${NPC_RESPAWN_DELAY}s.`);
+      console.log(`NPC ${removed.id} despawned after death. Respawning in ${NPC_RESPAWN_DELAY}s.`);
     }
   }
 
@@ -366,7 +366,7 @@ setInterval(() => {
       npc.name = entry.name;
       npcs.push(npc);
       broadcast({ type: "npcSpawned", npc: { id: npc.id, name: npc.name, x: npc.x, y: npc.y, z: npc.z, ry: npc.ry, anim: npc.anim, addiction: npc.addiction } });
-      console.log(`NPC "${npc.name}" spawned. ${npcs.length} NPCs active.`);
+      console.log(`NPC ${npc.id} spawned. ${npcs.length} NPCs active.`);
     }
   }
 

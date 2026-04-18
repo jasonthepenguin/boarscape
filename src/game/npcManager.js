@@ -17,14 +17,31 @@ import { SELECTION_RING_RADIUS, SELECTION_RING_TUBE, NPC_DEATH_ANIM_DURATION, NP
 
 const TICK_RATE = 20;
 
-// Shirt colors for variety
-const SHIRT_COLORS = ["#3b6fb5", "#b5473b", "#3bb56f", "#8b5e3c", "#6b3bb5", "#b5953b"];
+// NPC variants — picked deterministically per-id so every client renders the
+// same model for the same NPC. `hair` set => "girl" variant (hair on top + long
+// hair down the back, paired with a pink torso).
+const NPC_VARIANTS = [
+  { shirt: "#3b6fb5", hair: null },          // blue
+  { shirt: "#b5473b", hair: null },          // red
+  { shirt: "#3bb56f", hair: null },          // green
+  { shirt: "#8b5e3c", hair: null },          // brown
+  { shirt: "#6b3bb5", hair: null },          // purple
+  { shirt: "#b5953b", hair: null },          // gold
+  { shirt: "#ff6fb5", hair: "#5a3a1c" },     // pink + brown hair — girl variant
+];
 
-function createHumanoidModel(shirtColorHex) {
+// Pull the trailing integer out of "npc_7"-style ids so variant selection is
+// stable regardless of map insertion order or respawn shuffling.
+function variantIndexFromId(id) {
+  const m = String(id).match(/(\d+)$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+function createHumanoidModel(variant) {
   const root = new Group();
 
   const skinMat = new MeshStandardMaterial({ color: "#e8b89d", roughness: 0.9 });
-  const shirtMat = new MeshStandardMaterial({ color: shirtColorHex, roughness: 0.85 });
+  const shirtMat = new MeshStandardMaterial({ color: variant.shirt, roughness: 0.85 });
   const pantsMat = new MeshStandardMaterial({ color: "#3a3a50", roughness: 0.9 });
   const shoeMat = new MeshStandardMaterial({ color: "#2a1a0a", roughness: 1 });
 
@@ -38,6 +55,21 @@ function createHumanoidModel(shirtColorHex) {
   head.position.y = 1.45;
   head.castShadow = true;
   body.add(head);
+
+  // Hair (girl variant only) — boxy "cap" sitting on top of the head + a long
+  // panel hanging down the back to mid-torso. The cap is shifted slightly back
+  // so the face/forehead stays visible.
+  if (variant.hair) {
+    const hairMat = new MeshStandardMaterial({ color: variant.hair, roughness: 0.7 });
+    const hairTop = new Mesh(new BoxGeometry(0.36, 0.12, 0.32), hairMat);
+    hairTop.position.set(0, 1.56, -0.02);
+    hairTop.castShadow = true;
+    body.add(hairTop);
+    const hairBack = new Mesh(new BoxGeometry(0.36, 0.55, 0.08), hairMat);
+    hairBack.position.set(0, 1.20, -0.13);
+    hairBack.castShadow = true;
+    body.add(hairBack);
+  }
 
   // Body/torso
   const torso = new Mesh(new BoxGeometry(0.4, 0.5, 0.22), shirtMat);
@@ -269,8 +301,8 @@ export class NpcManager {
   addNpc(id, name) {
     if (this.npcs.has(id)) return;
 
-    const shirtColor = SHIRT_COLORS[this.npcs.size % SHIRT_COLORS.length];
-    const { root, leftLeg, rightLeg, leftArm, rightArm } = createHumanoidModel(shirtColor);
+    const variant = NPC_VARIANTS[variantIndexFromId(id) % NPC_VARIANTS.length];
+    const { root, leftLeg, rightLeg, leftArm, rightArm } = createHumanoidModel(variant);
 
     // Nametag
     const nametag = createNametag(name);

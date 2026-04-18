@@ -14,7 +14,9 @@ export function createNpc(index) {
 
   return {
     id: `npc_${index + 1}`,
-    name: `Human NPC #${index + 1}`,
+    // Visible nametag — kept generic so the label above each NPC just reads "Kid".
+    // The id (npc_N) is what's used for identification in logs/messages.
+    name: "Kid",
     x: Math.cos(angle) * dist,
     y: 0,
     z: Math.sin(angle) * dist,
