@@ -26,6 +26,9 @@ export class InputManager {
     this._lockOnInteract = false;
     this.onPointerLockChange = null; // optional callback (locked: bool)
 
+    // Right mouse button held state
+    this._rmbDown = false;
+
     // Click detection (distinguish from drag)
     this._pointerStartX = 0;
     this._pointerStartY = 0;
@@ -62,6 +65,10 @@ export class InputManager {
     };
 
     this._onPointerDown = (e) => {
+      if (e.button === 2) {
+        this._rmbDown = true;
+        return;
+      }
       if (e.button !== 0) return;
       this._dragging = true;
       this._pointerId = e.pointerId;
@@ -103,6 +110,10 @@ export class InputManager {
     };
 
     this._onPointerUp = (e) => {
+      if (e.button === 2) {
+        this._rmbDown = false;
+        return;
+      }
       if (this._pointerId != null && e.pointerId !== this._pointerId) return;
       // If pointer barely moved, treat as a click
       if (!this._didDrag) {
@@ -157,6 +168,10 @@ export class InputManager {
 
   isKeyDown(code) {
     return this._keysDown.has(code);
+  }
+
+  isRmbDown() {
+    return this._rmbDown;
   }
 
   wasJumpPressed() {

@@ -1,5 +1,5 @@
 import { WebSocketServer } from "ws";
-import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, killNpc } from "./npcs.js";
+import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, killNpc, damageNpc } from "./npcs.js";
 import {
   GRENADE_RANGE,
   GRENADE_FUSE,
@@ -9,6 +9,7 @@ import {
   PLANE_SPAWN_Z,
   PLANE_AUTOPILOT_DURATION,
   PLANE_MIN_Y,
+  BULLET_DAMAGE,
 } from "../src/config.js";
 import { NPC_RESPAWN_DELAY } from "../src/config.js";
 
@@ -179,6 +180,31 @@ wss.on("connection", (ws) => {
         targetX,
         targetZ,
       });
+    }
+
+    if (msg.type === "bulletHit" && playerId) {
+      // Only the current pilot can claim bullet hits
+      if (plane.pilotId !== playerId) return;
+      const npc = npcs.find(n => n.id === msg.npcId);
+      if (!npc || npc.state === "dead") return;
+
+      const result = damageNpc(npc, BULLET_DAMAGE);
+      if (!result) return;
+
+      broadcast({
+        type: "npcDamaged",
+        npcId: npc.id,
+        hp: npc.hp,
+        attackerId: playerId,
+      });
+
+      if (result.died) {
+        broadcast({
+          type: "npcDied",
+          npcId: npc.id,
+          killerId: playerId,
+        });
+      }
     }
 
     if (msg.type === "enterPlane" && playerId) {

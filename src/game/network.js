@@ -108,6 +108,12 @@ export class NetworkManager {
     }
   }
 
+  sendBulletHit(npcId) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "bulletHit", npcId }));
+    }
+  }
+
   disconnect() {
     this.ws?.close();
     this.ws = null;

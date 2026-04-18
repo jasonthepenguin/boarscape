@@ -40,7 +40,7 @@
   {/if}
 
   {#if planeUi.inPlane}
-    <div class="plane-prompt"><span class="key">E</span> Exit &nbsp;·&nbsp; <span class="key">W</span>/<span class="key">S</span> throttle &nbsp;·&nbsp; <span class="mouse-hint">Mouse</span> aim</div>
+    <div class="plane-prompt"><span class="key">E</span> Exit &nbsp;·&nbsp; <span class="key">W</span>/<span class="key">S</span> throttle &nbsp;·&nbsp; <span class="mouse-hint">Mouse</span> aim &nbsp;·&nbsp; <span class="mouse-hint">RMB</span> fire</div>
     <div class="plane-crosshair"></div>
   {/if}
 

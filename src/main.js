@@ -12,7 +12,8 @@ import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
 import { GrenadeManager, GrenadeAimer } from "./game/grenadeProjectile.js";
 import { Plane } from "./game/plane.js";
-import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, PLANE_INTERACT_RADIUS, PLANE_SPAWN_X, PLANE_SPAWN_Y, PLANE_SPAWN_Z, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
+import { BulletManager } from "./game/planeBullets.js";
+import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, PLANE_INTERACT_RADIUS, PLANE_SPAWN_X, PLANE_SPAWN_Y, PLANE_SPAWN_Z, BULLET_FIRE_INTERVAL, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
 import { DoubleSide, Mesh, MeshBasicMaterial, Plane as ThreePlane, Raycaster, TorusGeometry, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
@@ -48,6 +49,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
   const grenadeManager = new GrenadeManager(scene);
   const grenadeAimer = new GrenadeAimer(scene);
   const plane = new Plane(scene);
+  const bullets = new BulletManager(
+    scene,
+    () => npcManager.npcs,
+    (npcId) => network.sendBulletHit(npcId),
+  );
+  let bulletFireTimer = 0;
+  let bulletWingToggle = 0;
   if (existingPlane) {
     plane.snapTo(existingPlane.x, existingPlane.y, existingPlane.z, existingPlane.rx, existingPlane.ry, existingPlane.rz);
     plane.setPilot(existingPlane.pilotId, network.playerId);
@@ -492,9 +500,22 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
         planeStateSendTimer = 0;
         network.sendPlaneState(newState);
       }
+
+      // Hold RMB to fire alternating wing-tip tracers
+      bulletFireTimer = Math.max(0, bulletFireTimer - dt);
+      if (input.isRmbDown() && bulletFireTimer <= 0) {
+        const wingX = bulletWingToggle === 0 ? -2.5 : 2.5;
+        const localOrigin = new Vector3(wingX, 0.3, -0.3);
+        const worldOrigin = localOrigin.applyMatrix4(plane.root.matrixWorld);
+        const forward = new Vector3(0, 0, -1).applyQuaternion(plane.root.quaternion);
+        bullets.spawn(worldOrigin, forward);
+        bulletWingToggle = 1 - bulletWingToggle;
+        bulletFireTimer = BULLET_FIRE_INTERVAL;
+      }
     } else {
       plane.update(dt);
     }
+    bullets.update(dt);
 
     // Proximity prompt for entering the plane
     if (!planeUi.inPlane && player?.root) {
