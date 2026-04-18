@@ -3,6 +3,7 @@ import {
   CylinderGeometry,
   Group,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   Vector3,
 } from "three";
@@ -32,7 +33,7 @@ const TICK_RATE = 20;
 function createPlaneMesh() {
   const root = new Group();
 
-  const redMat = new MeshStandardMaterial({ color: "#cc2828", roughness: 0.55, metalness: 0.25 });
+  const bodyMat = new MeshStandardMaterial({ color: "#0c0c0c", roughness: 0.45, metalness: 0.55 });
   const darkMat = new MeshStandardMaterial({ color: "#222222", roughness: 0.7, metalness: 0.4 });
   const glassMat = new MeshStandardMaterial({
     color: "#88ccff",
@@ -42,11 +43,13 @@ function createPlaneMesh() {
     opacity: 0.55,
   });
   const wheelMat = new MeshStandardMaterial({ color: "#1a1a1a", roughness: 0.9 });
+  // Bright white logo material — unaffected by lighting so it pops against the black body
+  const logoMat = new MeshBasicMaterial({ color: "#ffffff" });
 
   // Fuselage — nose points to -Z
   const fuselage = new Mesh(
     new BoxGeometry(FUSELAGE_WIDTH, FUSELAGE_WIDTH * 0.92, FUSELAGE_LENGTH),
-    redMat,
+    bodyMat,
   );
   fuselage.castShadow = true;
   fuselage.receiveShadow = true;
@@ -61,10 +64,24 @@ function createPlaneMesh() {
   root.add(cockpit);
 
   // Top wing (high-wing Cessna style) — slight forward of center
-  const wings = new Mesh(new BoxGeometry(WING_SPAN, 0.12, WING_CHORD), redMat);
+  const wings = new Mesh(new BoxGeometry(WING_SPAN, 0.12, WING_CHORD), bodyMat);
   wings.position.set(0, FUSELAGE_WIDTH * 0.55, -FUSELAGE_LENGTH * 0.1);
   wings.castShadow = true;
   root.add(wings);
+
+  // White X logos — one per wing-half, sitting flush on the wing's top surface.
+  // Each X is two thin bars rotated +/-45° around Y so they cross flat on the wing.
+  const wingTopY = FUSELAGE_WIDTH * 0.55 + 0.06; // wing center + half thickness
+  const wingZ = -FUSELAGE_LENGTH * 0.1;
+  const barGeo = new BoxGeometry(0.75, 0.03, 0.13);
+  for (const sx of [-1, 1]) {
+    for (const rot of [Math.PI / 4, -Math.PI / 4]) {
+      const bar = new Mesh(barGeo, logoMat);
+      bar.position.set(sx * 1.5, wingTopY + 0.005, wingZ);
+      bar.rotation.y = rot;
+      root.add(bar);
+    }
+  }
 
   // Wing struts (small black supports under each wing)
   for (const sx of [-1, 1]) {
@@ -75,13 +92,13 @@ function createPlaneMesh() {
   }
 
   // Tail vertical fin
-  const tailFin = new Mesh(new BoxGeometry(0.08, 0.7, 0.55), redMat);
+  const tailFin = new Mesh(new BoxGeometry(0.08, 0.7, 0.55), bodyMat);
   tailFin.position.set(0, FUSELAGE_WIDTH * 0.6, FUSELAGE_LENGTH * 0.45);
   tailFin.castShadow = true;
   root.add(tailFin);
 
   // Tail horizontal stabilizer
-  const tailStab = new Mesh(new BoxGeometry(1.7, 0.08, 0.45), redMat);
+  const tailStab = new Mesh(new BoxGeometry(1.7, 0.08, 0.45), bodyMat);
   tailStab.position.set(0, FUSELAGE_WIDTH * 0.45, FUSELAGE_LENGTH * 0.45);
   tailStab.castShadow = true;
   root.add(tailStab);

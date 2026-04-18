@@ -17,6 +17,7 @@ export class NetworkManager {
     this.onPlaneRespawned = null;
     this.onPlaneState = null;
     this.onNpcDamaged = null;
+    this.onBulletExplosion = null;
   }
 
   connect(name, color) {
@@ -61,6 +62,8 @@ export class NetworkManager {
           this.onPlanePilot?.(msg);
         } else if (msg.type === "planeRespawned") {
           this.onPlaneRespawned?.(msg);
+        } else if (msg.type === "bulletExplosion") {
+          this.onBulletExplosion?.(msg);
         }
       };
 
@@ -117,6 +120,12 @@ export class NetworkManager {
     }
   }
 
+  sendBulletGroundHit(x, z) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "bulletGroundHit", x, z }));
+    }
+  }
+
   disconnect() {
     this.ws?.close();
     this.ws = null;
@@ -135,5 +144,6 @@ export class NetworkManager {
     this.onPlaneRespawned = null;
     this.onPlaneState = null;
     this.onNpcDamaged = null;
+    this.onBulletExplosion = null;
   }
 }

@@ -53,6 +53,12 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     scene,
     () => npcManager.npcs,
     (npcId) => network.sendBulletHit(npcId),
+    // Ground impact: detonate locally (instant feedback) and tell the server
+    // so it can damage NPCs in the AoE + broadcast the boom to other clients.
+    (x, z) => {
+      grenadeManager.triggerExplosion(x, z);
+      network.sendBulletGroundHit(x, z);
+    },
   );
   let bulletFireTimer = 0;
   let bulletWingToggle = 0;
@@ -226,6 +232,11 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     const startPos = new Vector3(msg.startX, msg.startY + 1.2, msg.startZ);
     const targetPos = new Vector3(msg.targetX, 0, msg.targetZ);
     grenadeManager.throwAt(startPos, targetPos);
+  };
+  network.onBulletExplosion = (msg) => {
+    // Pilot already detonated locally on impact. Observers render here.
+    if (msg.attackerId === network.playerId) return;
+    grenadeManager.triggerExplosion(msg.x, msg.z);
   };
   network.onPlaneState = (state) => {
     plane.receiveState(state.x, state.y, state.z, state.rx, state.ry, state.rz);

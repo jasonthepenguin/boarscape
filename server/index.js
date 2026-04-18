@@ -10,6 +10,9 @@ import {
   PLANE_AUTOPILOT_DURATION,
   PLANE_MIN_Y,
   BULLET_DAMAGE,
+  BULLET_GROUND_EXPLOSION_RADIUS,
+  BULLET_GROUND_EXPLOSION_DAMAGE,
+  FIELD_SIZE,
 } from "../src/config.js";
 import { NPC_RESPAWN_DELAY } from "../src/config.js";
 
@@ -205,6 +208,51 @@ wss.on("connection", (ws) => {
           killerId: playerId,
         });
       }
+    }
+
+    if (msg.type === "bulletGroundHit" && playerId) {
+      // Only the pilot can spawn ground explosions (their bullets only).
+      if (plane.pilotId !== playerId) return;
+      const x = Number(msg.x);
+      const z = Number(msg.z);
+      if (!Number.isFinite(x) || !Number.isFinite(z)) return;
+      // Reject anything outside the playfield (paranoia/cheat guard).
+      const half = FIELD_SIZE / 2;
+      if (Math.abs(x) > half || Math.abs(z) > half) return;
+
+      const radiusSq = BULLET_GROUND_EXPLOSION_RADIUS * BULLET_GROUND_EXPLOSION_RADIUS;
+      for (const npc of npcs) {
+        if (npc.state === "dead") continue;
+        const dx = npc.x - x;
+        const dz = npc.z - z;
+        if (dx * dx + dz * dz > radiusSq) continue;
+
+        const result = damageNpc(npc, BULLET_GROUND_EXPLOSION_DAMAGE);
+        if (!result) continue;
+
+        broadcast({
+          type: "npcDamaged",
+          npcId: npc.id,
+          hp: npc.hp,
+          attackerId: playerId,
+        });
+
+        if (result.died) {
+          broadcast({
+            type: "npcDied",
+            npcId: npc.id,
+            killerId: playerId,
+          });
+        }
+      }
+
+      // Tell every other client to render the boom (pilot already rendered it locally).
+      broadcast({
+        type: "bulletExplosion",
+        x,
+        z,
+        attackerId: playerId,
+      });
     }
 
     if (msg.type === "enterPlane" && playerId) {

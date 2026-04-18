@@ -70,12 +70,15 @@ function createHitFlash() {
  *
  * `getNpcs` returns the NpcManager's `npcs` map (id → entry with `root`,
  * `dead`). `onHit(npcId)` is called when a bullet finds an NPC.
+ * `onGroundImpact(x, z)` is called when a bullet hits the ground (y <= 0)
+ * so the caller can spawn an AoE explosion + notify the server.
  */
 export class BulletManager {
-  constructor(scene, getNpcs, onHit) {
+  constructor(scene, getNpcs, onHit, onGroundImpact = null) {
     this.scene = scene;
     this.getNpcs = getNpcs;
     this.onHit = onHit;
+    this.onGroundImpact = onGroundImpact;
     this.bullets = [];
     this.flashes = [];
     this._tmp = new Vector3();
@@ -129,6 +132,16 @@ export class BulletManager {
       if (hitId !== null) {
         this._spawnFlash(b.mesh.position);
         this.onHit?.(hitId);
+        this.scene.remove(b.mesh);
+        disposeObject(b.mesh);
+        this.bullets.splice(i, 1);
+        continue;
+      }
+
+      // Ground impact — fires the AoE callback so the manager's owner can
+      // detonate an explosion and damage NPCs in range.
+      if (b.mesh.position.y <= 0) {
+        this.onGroundImpact?.(b.mesh.position.x, b.mesh.position.z);
         this.scene.remove(b.mesh);
         disposeObject(b.mesh);
         this.bullets.splice(i, 1);

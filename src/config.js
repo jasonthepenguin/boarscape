@@ -143,6 +143,9 @@ export const BULLET_SPEED = 70;
 export const BULLET_LIFETIME = 1.4;
 export const BULLET_HIT_RADIUS = 0.85;
 export const BULLET_CONVERGE_DISTANCE = 50; // wing-tip tracers aim at a point along the crosshair direction
+// Ground impact: bullets that hit the dirt detonate in a small radius (mini-grenade)
+export const BULLET_GROUND_EXPLOSION_RADIUS = 2.5;
+export const BULLET_GROUND_EXPLOSION_DAMAGE = 100; // instakill anything inside the radius
 
 // =============================================================================
 // XP / Leveling

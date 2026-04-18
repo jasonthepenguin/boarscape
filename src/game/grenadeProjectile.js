@@ -89,6 +89,15 @@ export class GrenadeManager {
     });
   }
 
+  /**
+   * Spawn a standalone explosion visual at (x, z) — same look as a grenade
+   * detonation, no fuse/projectile. Used by plane bullet ground impacts so the
+   * effect is reused without spinning up a second renderer.
+   */
+  triggerExplosion(x, z) {
+    this._spawnExplosion(x, z);
+  }
+
   _spawnExplosion(x, z) {
     const group = new Group();
     group.position.set(x, 0, z);
