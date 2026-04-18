@@ -382,36 +382,40 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       }
     }
 
-    // Handle F key for attack
-    if (!gameMenu.open && input.wasAttackPressed() && npcManager.selectedNpcId && attackCooldown <= 0 && player?.root) {
-      const targetPos = npcManager.getNpcWorldPosition(npcManager.selectedNpcId);
-      if (targetPos) {
-        const playerPos = player.root.position;
-        const dist = Math.sqrt(
-          (targetPos.x - playerPos.x) ** 2 + (targetPos.z - playerPos.z) ** 2
-        );
+    // Handle 1 key for phone — selects slot 1 (disarming grenade), then fires if able
+    if (!gameMenu.open && input.wasAttackPressed() && player?.root) {
+      actionBar.selectedSlot = 1;
+      if (actionBar.grenadeArmed) setGrenadeArmed(false);
 
-        if (dist <= ATTACK_RANGE) {
-          // Start cooldown
-          attackCooldown = ATTACK_COOLDOWN;
-          actionBar.cooldownRemaining = ATTACK_COOLDOWN;
-          actionBar.cooldownTotal = ATTACK_COOLDOWN;
+      if (npcManager.selectedNpcId && attackCooldown <= 0) {
+        const targetPos = npcManager.getNpcWorldPosition(npcManager.selectedNpcId);
+        if (targetPos) {
+          const playerPos = player.root.position;
+          const dist = Math.sqrt(
+            (targetPos.x - playerPos.x) ** 2 + (targetPos.z - playerPos.z) ** 2
+          );
 
-          // Spawn phone projectile
-          const startPos = player.root.position.clone();
-          startPos.y += 1.2;
-          targetPos.y += 0.8;
+          if (dist <= ATTACK_RANGE) {
+            attackCooldown = ATTACK_COOLDOWN;
+            actionBar.cooldownRemaining = ATTACK_COOLDOWN;
+            actionBar.cooldownTotal = ATTACK_COOLDOWN;
 
-          const npcId = npcManager.selectedNpcId;
-          phoneProjectiles.spawn(startPos, targetPos, () => {
-            network.sendAttack(npcId);
-          });
+            const startPos = player.root.position.clone();
+            startPos.y += 1.2;
+            targetPos.y += 0.8;
+
+            const npcId = npcManager.selectedNpcId;
+            phoneProjectiles.spawn(startPos, targetPos, () => {
+              network.sendAttack(npcId);
+            });
+          }
         }
       }
     }
 
-    // Handle 2 key for grenade — toggles armed; click then chooses landing point
+    // Handle 2 key for grenade — selects slot 2; toggles armed when allowed
     if (!gameMenu.open && input.wasGrenadePressed() && player?.root) {
+      actionBar.selectedSlot = 2;
       if (actionBar.grenadeArmed) {
         setGrenadeArmed(false);
       } else if (grenadeCooldown <= 0) {

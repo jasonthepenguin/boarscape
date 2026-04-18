@@ -36,14 +36,14 @@
   </div>
 
   <div class="action-bar">
-    <div class="action-slot active" class:ready={canAttack}>
+    <div class="action-slot active" class:ready={canAttack} class:selected={actionBar.selectedSlot === 1}>
       <div class="slot-key">1</div>
       <div class="slot-icon">📱</div>
       {#if cooldownPct > 0}
         <div class="cooldown-overlay" style:height="{cooldownPct}%"></div>
       {/if}
     </div>
-    <div class="action-slot active" class:ready={canGrenade} class:armed={actionBar.grenadeArmed}>
+    <div class="action-slot active" class:ready={canGrenade} class:selected={actionBar.selectedSlot === 2} class:armed={actionBar.grenadeArmed}>
       <div class="slot-key">2</div>
       <div class="slot-icon">💣</div>
       {#if grenadeCooldownPct > 0}
@@ -176,19 +176,22 @@
       0 0 8px rgba(255, 215, 0, 0.3);
   }
 
-  .action-slot.active.armed {
+  .action-slot.active.selected {
     border-color: #ffb877;
-    background: linear-gradient(180deg, #6a3a14 0%, #3d1f06 100%);
+    background: linear-gradient(180deg, #5a3010 0%, #321a05 100%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
       0 2px 4px rgba(0, 0, 0, 0.5),
-      0 0 14px rgba(255, 140, 58, 0.7);
+      0 0 12px rgba(255, 140, 58, 0.6);
+  }
+
+  .action-slot.active.armed {
     animation: armedPulse 1.2s ease-in-out infinite;
   }
 
   @keyframes armedPulse {
     0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 140, 58, 0.5); }
-    50%      { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 140, 58, 0.9); }
+    50%      { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 140, 58, 1.0); }
   }
 
   .action-slot.locked {
