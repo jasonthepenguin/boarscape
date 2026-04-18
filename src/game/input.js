@@ -14,6 +14,11 @@ export class InputManager {
     this._pointerDx = 0;
     this._pointerDy = 0;
 
+    // Latest pointer screen position (updated on every move, drag or not)
+    this._pointerX = window.innerWidth / 2;
+    this._pointerY = window.innerHeight / 2;
+    this._pointerSeen = false;
+
     // Click detection (distinguish from drag)
     this._pointerStartX = 0;
     this._pointerStartY = 0;
@@ -55,6 +60,9 @@ export class InputManager {
     };
 
     this._onPointerMove = (e) => {
+      this._pointerX = e.clientX;
+      this._pointerY = e.clientY;
+      this._pointerSeen = true;
       if (!this._dragging) return;
       if (this._pointerId != null && e.pointerId !== this._pointerId) return;
       this._pointerDx += e.clientX - this._lastPointerX;
@@ -133,6 +141,10 @@ export class InputManager {
     const click = this._clickEvent;
     this._clickEvent = null;
     return click;
+  }
+
+  getPointerPosition() {
+    return { x: this._pointerX, y: this._pointerY, seen: this._pointerSeen };
   }
 
   consumePointerDelta() {

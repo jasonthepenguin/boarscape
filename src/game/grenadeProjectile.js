@@ -8,6 +8,7 @@ import {
   MeshStandardMaterial,
   RingGeometry,
   SphereGeometry,
+  Vector3,
 } from "three";
 import {
   GRENADE_ARC_HEIGHT,
@@ -15,6 +16,20 @@ import {
   GRENADE_EXPLOSION_RADIUS,
   GRENADE_FUSE,
 } from "../config.js";
+
+/**
+ * Sample a point along the grenade's flight arc at parameter t in [0, 1].
+ * Mirrors the actual flight math in GrenadeManager.update.
+ */
+function arcPoint(start, end, t, out) {
+  out.x = start.x + (end.x - start.x) * t;
+  out.z = start.z + (end.z - start.z) * t;
+  const arcT = Math.min(1, t / 0.7);
+  const baseY = start.y + (end.y - start.y) * arcT;
+  const arc = GRENADE_ARC_HEIGHT * 4 * arcT * (1 - arcT);
+  out.y = Math.max(0.1, baseY + arc);
+  return out;
+}
 
 function createGrenadeModel() {
   const group = new Group();
@@ -196,5 +211,128 @@ export class GrenadeManager {
     }
     this.projectiles.length = 0;
     this.explosions.length = 0;
+  }
+}
+
+const TRAJECTORY_DOTS = 22;
+const DOT_BASE_OPACITY = 0.18;
+const DOT_PULSE_OPACITY = 0.62;
+const DOT_FLOW_SPEED = 3.2;
+const DOT_RADIUS = 0.09;
+
+/**
+ * Renders a previewed grenade trajectory: a chain of additive orange dots
+ * along the arc + a pulsing target ring at the landing point. The dot opacities
+ * flow toward the target so the eye reads the throw direction immediately.
+ */
+export class GrenadeAimer {
+  constructor(scene) {
+    this.scene = scene;
+    this.group = new Group();
+    this.group.visible = false;
+    this._timer = 0;
+    this._tmp = new Vector3();
+    this._start = new Vector3();
+    this._end = new Vector3();
+
+    // Trajectory dots
+    this.dots = [];
+    const sharedGeo = new SphereGeometry(DOT_RADIUS, 8, 6);
+    for (let i = 0; i < TRAJECTORY_DOTS; i++) {
+      const mat = new MeshBasicMaterial({
+        color: 0xff8c3a,
+        transparent: true,
+        opacity: DOT_BASE_OPACITY,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      });
+      const dot = new Mesh(sharedGeo, mat);
+      this.group.add(dot);
+      this.dots.push(dot);
+    }
+
+    // Target ring on the ground
+    const ringGeo = new RingGeometry(0.5, 0.65, 32);
+    const ringMat = new MeshBasicMaterial({
+      color: 0xff8c3a,
+      transparent: true,
+      opacity: 0.7,
+      side: DoubleSide,
+      depthWrite: false,
+      blending: AdditiveBlending,
+    });
+    this.targetRing = new Mesh(ringGeo, ringMat);
+    this.targetRing.rotation.x = -Math.PI / 2;
+    this.targetRing.position.y = 0.05;
+    this.group.add(this.targetRing);
+
+    // Inner crosshair dot at landing point
+    const centerGeo = new SphereGeometry(0.12, 10, 8);
+    const centerMat = new MeshBasicMaterial({
+      color: 0xffd6a8,
+      transparent: true,
+      opacity: 0.9,
+      blending: AdditiveBlending,
+      depthWrite: false,
+    });
+    this.targetCenter = new Mesh(centerGeo, centerMat);
+    this.targetCenter.position.y = 0.2;
+    this.group.add(this.targetCenter);
+
+    scene.add(this.group);
+  }
+
+  show() {
+    this.group.visible = true;
+  }
+
+  hide() {
+    this.group.visible = false;
+  }
+
+  /**
+   * Update trajectory geometry from a start point (player hand height) to a
+   * target point on the ground. Caller is responsible for clamping target
+   * to the throw range.
+   */
+  update(dt, startX, startY, startZ, targetX, targetZ) {
+    if (!this.group.visible) return;
+    this._timer += dt;
+    this._start.set(startX, startY, startZ);
+    this._end.set(targetX, 0, targetZ);
+
+    const flightFraction = 0.7; // dots cover the in-flight portion only
+    for (let i = 0; i < this.dots.length; i++) {
+      const segT = (i + 1) / (this.dots.length + 1) * flightFraction;
+      arcPoint(this._start, this._end, segT, this._tmp);
+      this.dots[i].position.copy(this._tmp);
+
+      // Flowing wave: dots brighten in sequence toward the target
+      const phase = i / this.dots.length;
+      const wave = (Math.sin(this._timer * DOT_FLOW_SPEED - phase * Math.PI * 2) + 1) * 0.5;
+      this.dots[i].material.opacity = DOT_BASE_OPACITY + wave * DOT_PULSE_OPACITY;
+    }
+
+    // Target ring: gentle pulse + slow rotation
+    this.targetRing.position.set(targetX, 0.05, targetZ);
+    const ringPulse = 1.0 + 0.18 * Math.sin(this._timer * 4);
+    this.targetRing.scale.setScalar(ringPulse);
+    this.targetRing.rotation.z = this._timer * 0.6;
+
+    this.targetCenter.position.set(targetX, 0.2, targetZ);
+    const centerPulse = 0.85 + 0.15 * Math.sin(this._timer * 6);
+    this.targetCenter.material.opacity = centerPulse;
+  }
+
+  dispose() {
+    for (const d of this.dots) {
+      d.material.dispose();
+    }
+    this.dots[0]?.geometry.dispose();
+    this.targetRing.geometry.dispose();
+    this.targetRing.material.dispose();
+    this.targetCenter.geometry.dispose();
+    this.targetCenter.material.dispose();
+    this.scene.remove(this.group);
   }
 }

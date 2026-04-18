@@ -10,7 +10,7 @@ import { loadPlayer, createLevelUpAura, updateNametag } from "./game/player.js";
 import { RemotePlayerManager } from "./game/remotePlayers.js";
 import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
-import { GrenadeManager } from "./game/grenadeProjectile.js";
+import { GrenadeManager, GrenadeAimer } from "./game/grenadeProjectile.js";
 import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
 import { DoubleSide, Mesh, MeshBasicMaterial, Plane, Raycaster, TorusGeometry, Vector2, Vector3 } from "three";
 
@@ -40,6 +40,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const npcManager = new NpcManager(scene);
   const phoneProjectiles = new PhoneProjectileManager(scene);
   const grenadeManager = new GrenadeManager(scene);
+  const grenadeAimer = new GrenadeAimer(scene);
 
   // Raycaster for NPC click selection + grenade ground targeting
   const raycaster = new Raycaster();
@@ -65,10 +66,37 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     if (armed && player?.root) {
       player.root.add(grenadeRangeRing);
       canvas.classList.add("aiming");
+      grenadeAimer.show();
     } else {
       grenadeRangeRing.parent?.remove(grenadeRangeRing);
       canvas.classList.remove("aiming");
+      grenadeAimer.hide();
     }
+  }
+
+  // Resolve current mouse position to a clamped throw target on the ground
+  // plane. Returns null if no plane intersection (e.g. camera looking up).
+  const aimerTarget = new Vector3();
+  function resolveAimTarget() {
+    if (!player?.root) return null;
+    const ptr = input.getPointerPosition();
+    pointerNdc.x = (ptr.x / window.innerWidth) * 2 - 1;
+    pointerNdc.y = -(ptr.y / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(pointerNdc, camera);
+
+    const hit = raycaster.ray.intersectPlane(groundPlane, aimerTarget);
+    if (!hit) return null;
+
+    const playerPos = player.root.position;
+    const dx = hit.x - playerPos.x;
+    const dz = hit.z - playerPos.z;
+    const distSq = dx * dx + dz * dz;
+    if (distSq > GRENADE_RANGE * GRENADE_RANGE) {
+      const scale = GRENADE_RANGE / Math.sqrt(distSq);
+      hit.x = playerPos.x + dx * scale;
+      hit.z = playerPos.z + dz * scale;
+    }
+    return hit;
   }
 
   // XP / leveling helpers
@@ -240,21 +268,20 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     }
   }
 
-  // Grenade throw via click — raycast against ground plane, clamp to range
+  // Grenade throw via click — uses the same aim resolver as the preview
   function handleGrenadeThrowClick(clickEvent) {
     if (!player?.root) return false;
+    // Update pointer position from the click in case mouse hasn't moved since
     setRayFromClick(clickEvent);
-
     const hit = raycaster.ray.intersectPlane(groundPlane, groundHit);
     if (!hit) return false;
 
+    const playerPos = player.root.position;
     let targetX = hit.x;
     let targetZ = hit.z;
-    const playerPos = player.root.position;
     const dx = targetX - playerPos.x;
     const dz = targetZ - playerPos.z;
     const distSq = dx * dx + dz * dz;
-
     if (distSq > GRENADE_RANGE * GRENADE_RANGE) {
       const scale = GRENADE_RANGE / Math.sqrt(distSq);
       targetX = playerPos.x + dx * scale;
@@ -322,6 +349,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     npcManager.update(dt);
     phoneProjectiles.update(dt);
     grenadeManager.update(dt);
+    if (actionBar.grenadeArmed && player?.root) {
+      const aim = resolveAimTarget();
+      if (aim) {
+        const playerPos = player.root.position;
+        grenadeAimer.update(dt, playerPos.x, playerPos.y + 1.2, playerPos.z, aim.x, aim.z);
+      }
+    }
     if (levelUpAura && !levelUpAura.done) levelUpAura.update(dt);
 
     // Attack cooldown
