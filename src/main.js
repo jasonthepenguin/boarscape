@@ -37,6 +37,11 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
   loading.text = null;
 
   const input = new InputManager(canvas);
+  input.onPointerLockChange = (locked) => {
+    if (!locked && planeUi.inPlane) {
+      exitPlaneLocally(true);
+    }
+  };
   const remotePlayers = new RemotePlayerManager(scene, modelUrl);
   const npcManager = new NpcManager(scene);
   const phoneProjectiles = new PhoneProjectileManager(scene);
@@ -391,6 +396,8 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
   function exitPlaneLocally(notifyServer = true) {
     if (!planeUi.inPlane) return;
     planeUi.inPlane = false;
+    input.exitPointerLock();
+    input.consumeLookDelta(); // drop accumulated mouse motion
     const rider = plane.detachRider();
     if (rider) {
       unseatBoarToGround(rider);
@@ -443,6 +450,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     if (gameMenu.open && !wasMenuOpen) {
       pauseLocalPlayer();
       setGrenadeArmed(false);
+      if (planeUi.inPlane) exitPlaneLocally(true);
     }
     wasMenuOpen = gameMenu.open;
 
@@ -499,6 +507,10 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
     } else {
       planeUi.promptVisible = false;
     }
+
+    // Arm pointer lock so that the next E press will grab the cursor in the
+    // same user-gesture frame the lock is requested.
+    input.setLockOnInteract(planeUi.promptVisible && !planeUi.inPlane);
 
     if (!planeUi.inPlane && actionBar.grenadeArmed && player?.root) {
       const aim = resolveAimTarget();

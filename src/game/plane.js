@@ -11,8 +11,8 @@ import {
   PLANE_THROTTLE_ACCEL,
   PLANE_THROTTLE_DECEL,
   PLANE_THROTTLE_DRAG,
-  PLANE_PITCH_SPEED,
-  PLANE_YAW_SPEED,
+  PLANE_MOUSE_PITCH_SENS,
+  PLANE_MOUSE_YAW_SENS,
   PLANE_MIN_Y,
   PLANE_MAX_Y,
   PLANE_BOUNDS_MARGIN,
@@ -204,13 +204,13 @@ export class Plane {
       this.speed = Math.max(0, this.speed - PLANE_THROTTLE_DRAG * dt);
     }
 
-    // Pitch (Arrow Up/Down) — Up = climb (nose up), Down = dive
-    const pitch = (input.isKeyDown("ArrowUp") ? 1 : 0) - (input.isKeyDown("ArrowDown") ? 1 : 0);
-    // Yaw (A/D)
-    const yaw = (input.isKeyDown("KeyA") ? 1 : 0) - (input.isKeyDown("KeyD") ? 1 : 0);
-
-    if (pitch !== 0) this.root.rotateX(pitch * PLANE_PITCH_SPEED * dt);
-    if (yaw !== 0) this.root.rotateY(yaw * PLANE_YAW_SPEED * dt);
+    // Pitch + yaw from mouse look (pointer-locked while flying)
+    const look = input.consumeLookDelta();
+    // Mouse up (negative dy) → nose up; mouse right (positive dx) → yaw right
+    const pitchDelta = -look.dy * PLANE_MOUSE_PITCH_SENS;
+    const yawDelta = -look.dx * PLANE_MOUSE_YAW_SENS;
+    if (pitchDelta !== 0) this.root.rotateX(pitchDelta);
+    if (yawDelta !== 0) this.root.rotateY(yawDelta);
 
     // Forward velocity in local -Z direction (nose)
     const forward = new Vector3(0, 0, -1).applyQuaternion(this.root.quaternion);

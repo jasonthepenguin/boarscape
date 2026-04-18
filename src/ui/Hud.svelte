@@ -40,7 +40,8 @@
   {/if}
 
   {#if planeUi.inPlane}
-    <div class="plane-prompt"><span class="key">E</span> Exit &nbsp;·&nbsp; <span class="key">W</span>/<span class="key">S</span> throttle &nbsp;·&nbsp; <span class="key">A</span>/<span class="key">D</span> yaw &nbsp;·&nbsp; <span class="key">↑</span>/<span class="key">↓</span> pitch</div>
+    <div class="plane-prompt"><span class="key">E</span> Exit &nbsp;·&nbsp; <span class="key">W</span>/<span class="key">S</span> throttle &nbsp;·&nbsp; <span class="mouse-hint">Mouse</span> aim</div>
+    <div class="plane-crosshair"></div>
   {/if}
 
   {#if !planeUi.inPlane}
@@ -391,6 +392,31 @@
     background: linear-gradient(180deg, #2a1a08 0%, #1a0f00 100%);
     border: 1px solid var(--rs-gold-dark);
     font-weight: 400;
+    color: #fff;
+    font-size: 11px;
+    margin-right: 4px;
+  }
+
+  .plane-crosshair {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 28px;
+    height: 28px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'><circle cx='14' cy='14' r='9' fill='none' stroke='black' stroke-opacity='0.55' stroke-width='3.5'/><circle cx='14' cy='14' r='9' fill='none' stroke='white' stroke-width='1.6'/><circle cx='14' cy='14' r='2' fill='white' stroke='black' stroke-opacity='0.6' stroke-width='0.8'/></svg>");
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .mouse-hint {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #2a1a08 0%, #1a0f00 100%);
+    border: 1px solid var(--rs-gold-dark);
     color: #fff;
     font-size: 11px;
     margin-right: 4px;

@@ -20,6 +20,12 @@ export class InputManager {
     this._pointerY = window.innerHeight / 2;
     this._pointerSeen = false;
 
+    // Pointer-lock look delta (accumulated while pointer is locked to canvas)
+    this._lookDx = 0;
+    this._lookDy = 0;
+    this._lockOnInteract = false;
+    this.onPointerLockChange = null; // optional callback (locked: bool)
+
     // Click detection (distinguish from drag)
     this._pointerStartX = 0;
     this._pointerStartY = 0;
@@ -43,6 +49,11 @@ export class InputManager {
       }
       if (e.code === "KeyE" && !e.repeat) {
         this._interactPressed = true;
+        // Lock pointer while we still have user-gesture activation. Caller
+        // arms this only when E will actually enter the plane.
+        if (this._lockOnInteract && document.pointerLockElement !== this.domElement) {
+          this.domElement.requestPointerLock?.();
+        }
       }
     };
 
@@ -64,6 +75,13 @@ export class InputManager {
     };
 
     this._onPointerMove = (e) => {
+      // While the pointer is locked, screen X/Y don't change — only
+      // movementX/Y is meaningful (relative motion since last event).
+      if (document.pointerLockElement === this.domElement) {
+        this._lookDx += e.movementX || 0;
+        this._lookDy += e.movementY || 0;
+        return;
+      }
       this._pointerX = e.clientX;
       this._pointerY = e.clientY;
       this._pointerSeen = true;
@@ -102,6 +120,11 @@ export class InputManager {
 
     this._onContextMenu = (e) => e.preventDefault();
 
+    this._onPointerLockChange = () => {
+      const locked = document.pointerLockElement === this.domElement;
+      this.onPointerLockChange?.(locked);
+    };
+
     // Register listeners
     window.addEventListener("keydown", this._onKeyDown);
     window.addEventListener("keyup", this._onKeyUp);
@@ -111,6 +134,25 @@ export class InputManager {
     domElement.addEventListener("pointercancel", this._onPointerUp);
     domElement.addEventListener("wheel", this._onWheel, { passive: false });
     domElement.addEventListener("contextmenu", this._onContextMenu);
+    document.addEventListener("pointerlockchange", this._onPointerLockChange);
+  }
+
+  setLockOnInteract(value) {
+    this._lockOnInteract = !!value;
+  }
+
+  exitPointerLock() {
+    if (document.pointerLockElement === this.domElement) {
+      document.exitPointerLock?.();
+    }
+  }
+
+  consumeLookDelta() {
+    const dx = this._lookDx;
+    const dy = this._lookDy;
+    this._lookDx = 0;
+    this._lookDy = 0;
+    return { dx, dy };
   }
 
   isKeyDown(code) {
@@ -193,5 +235,9 @@ export class InputManager {
     this.domElement.removeEventListener("pointercancel", this._onPointerUp);
     this.domElement.removeEventListener("wheel", this._onWheel);
     this.domElement.removeEventListener("contextmenu", this._onContextMenu);
+    document.removeEventListener("pointerlockchange", this._onPointerLockChange);
+    if (document.pointerLockElement === this.domElement) {
+      document.exitPointerLock?.();
+    }
   }
 }
