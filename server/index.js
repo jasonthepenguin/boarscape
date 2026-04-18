@@ -125,17 +125,17 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "grenade" && playerId) {
-      const npc = npcs.find(n => n.id === msg.npcId);
-      if (!npc || npc.state === "dead") return;
       const player = players.get(playerId);
       if (!player) return;
 
-      const dx = npc.x - player.x;
-      const dz = npc.z - player.z;
-      if (dx * dx + dz * dz > GRENADE_RANGE * GRENADE_RANGE) return;
+      const targetX = Number(msg.x);
+      const targetZ = Number(msg.z);
+      if (!Number.isFinite(targetX) || !Number.isFinite(targetZ)) return;
 
-      const targetX = npc.x;
-      const targetZ = npc.z;
+      // Validate range; reject anything beyond GRENADE_RANGE (client clamps too)
+      const dx = targetX - player.x;
+      const dz = targetZ - player.z;
+      if (dx * dx + dz * dz > GRENADE_RANGE * GRENADE_RANGE + 0.01) return;
 
       pendingGrenades.push({
         timer: GRENADE_FUSE,

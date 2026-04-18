@@ -16,6 +16,7 @@ let _cooldownRemaining = $state(0);
 let _cooldownTotal = $state(0);
 let _grenadeCooldownRemaining = $state(0);
 let _grenadeCooldownTotal = $state(0);
+let _grenadeArmed = $state(false);
 let _selectedNpcId = $state(null);
 
 export const actionBar = {
@@ -27,6 +28,8 @@ export const actionBar = {
   set grenadeCooldownRemaining(v) { _grenadeCooldownRemaining = v; },
   get grenadeCooldownTotal() { return _grenadeCooldownTotal; },
   set grenadeCooldownTotal(v) { _grenadeCooldownTotal = v; },
+  get grenadeArmed() { return _grenadeArmed; },
+  set grenadeArmed(v) { _grenadeArmed = v; },
   get selectedNpcId() { return _selectedNpcId; },
   set selectedNpcId(v) { _selectedNpcId = v; },
 };
@@ -61,6 +64,7 @@ export function resetUiState() {
   _cooldownTotal = 0;
   _grenadeCooldownRemaining = 0;
   _grenadeCooldownTotal = 0;
+  _grenadeArmed = false;
   _selectedNpcId = null;
   _xp = 0;
   _level = 1;

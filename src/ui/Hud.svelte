@@ -43,7 +43,7 @@
         <div class="cooldown-overlay" style:height="{cooldownPct}%"></div>
       {/if}
     </div>
-    <div class="action-slot active" class:ready={canGrenade}>
+    <div class="action-slot active" class:ready={canGrenade} class:armed={actionBar.grenadeArmed}>
       <div class="slot-key">2</div>
       <div class="slot-icon">💣</div>
       {#if grenadeCooldownPct > 0}
@@ -83,7 +83,7 @@
     <div><span class="key">Wheel</span> Zoom</div>
     <div><span class="key">Click</span> Select NPC</div>
     <div><span class="key">F</span> Throw phone</div>
-    <div><span class="key">2</span> Grenade (AoE)</div>
+    <div><span class="key">2</span> then click — grenade</div>
     <div><span class="key">Esc</span> Game menu</div>
   </div>
 </div>
@@ -174,6 +174,21 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.1),
       0 2px 4px rgba(0, 0, 0, 0.5),
       0 0 8px rgba(255, 215, 0, 0.3);
+  }
+
+  .action-slot.active.armed {
+    border-color: #ffb877;
+    background: linear-gradient(180deg, #6a3a14 0%, #3d1f06 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 2px 4px rgba(0, 0, 0, 0.5),
+      0 0 14px rgba(255, 140, 58, 0.7);
+    animation: armedPulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes armedPulse {
+    0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 140, 58, 0.5); }
+    50%      { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 140, 58, 0.9); }
   }
 
   .action-slot.locked {

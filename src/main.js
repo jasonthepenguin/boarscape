@@ -12,7 +12,7 @@ import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
 import { GrenadeManager } from "./game/grenadeProjectile.js";
 import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
-import { Raycaster, Vector2, Vector3 } from "three";
+import { DoubleSide, Mesh, MeshBasicMaterial, Plane, Raycaster, TorusGeometry, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
 
@@ -41,13 +41,35 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const phoneProjectiles = new PhoneProjectileManager(scene);
   const grenadeManager = new GrenadeManager(scene);
 
-  // Raycaster for NPC click selection
+  // Raycaster for NPC click selection + grenade ground targeting
   const raycaster = new Raycaster();
   const pointerNdc = new Vector2();
+  const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
+  const groundHit = new Vector3();
   let attackCooldown = 0;
   let grenadeCooldown = 0;
   let levelUpAura = null;
   let wasMenuOpen = false;
+
+  // Range indicator ring shown around the player while a grenade is armed
+  const grenadeRangeRing = new Mesh(
+    new TorusGeometry(GRENADE_RANGE, 0.06, 8, 64),
+    new MeshBasicMaterial({ color: 0xff8c3a, transparent: true, opacity: 0.55, side: DoubleSide, depthWrite: false }),
+  );
+  grenadeRangeRing.rotation.x = -Math.PI / 2;
+  grenadeRangeRing.position.y = 0.05;
+
+  function setGrenadeArmed(armed) {
+    if (actionBar.grenadeArmed === armed) return;
+    actionBar.grenadeArmed = armed;
+    if (armed && player?.root) {
+      player.root.add(grenadeRangeRing);
+      canvas.classList.add("aiming");
+    } else {
+      grenadeRangeRing.parent?.remove(grenadeRangeRing);
+      canvas.classList.remove("aiming");
+    }
+  }
 
   // XP / leveling helpers
   function cumulativeXpForLevel(level) {
@@ -176,13 +198,16 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     npcManager.addNpc(msg.npc.id, msg.npc.name);
   };
 
-  // NPC selection via click
-  function handleClick(clickEvent) {
-    if (!player?.root) return;
-
+  function setRayFromClick(clickEvent) {
     pointerNdc.x = (clickEvent.clientX / window.innerWidth) * 2 - 1;
     pointerNdc.y = -(clickEvent.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointerNdc, camera);
+  }
+
+  // NPC selection via click
+  function handleNpcSelectClick(clickEvent) {
+    if (!player?.root) return;
+    setRayFromClick(clickEvent);
 
     const playerPos = player.root.position;
     let bestId = null;
@@ -213,6 +238,41 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       npcManager.deselectNpc();
       actionBar.selectedNpcId = null;
     }
+  }
+
+  // Grenade throw via click — raycast against ground plane, clamp to range
+  function handleGrenadeThrowClick(clickEvent) {
+    if (!player?.root) return false;
+    setRayFromClick(clickEvent);
+
+    const hit = raycaster.ray.intersectPlane(groundPlane, groundHit);
+    if (!hit) return false;
+
+    let targetX = hit.x;
+    let targetZ = hit.z;
+    const playerPos = player.root.position;
+    const dx = targetX - playerPos.x;
+    const dz = targetZ - playerPos.z;
+    const distSq = dx * dx + dz * dz;
+
+    if (distSq > GRENADE_RANGE * GRENADE_RANGE) {
+      const scale = GRENADE_RANGE / Math.sqrt(distSq);
+      targetX = playerPos.x + dx * scale;
+      targetZ = playerPos.z + dz * scale;
+    }
+
+    grenadeCooldown = GRENADE_COOLDOWN;
+    actionBar.grenadeCooldownRemaining = GRENADE_COOLDOWN;
+    actionBar.grenadeCooldownTotal = GRENADE_COOLDOWN;
+
+    const startPos = playerPos.clone();
+    startPos.y += 1.2;
+    const landPos = new Vector3(targetX, 0, targetZ);
+    grenadeManager.throwAt(startPos, landPos);
+    network.sendGrenade(targetX, targetZ);
+
+    setGrenadeArmed(false);
+    return true;
   }
 
   let player = null;
@@ -248,6 +308,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
     if (gameMenu.open && !wasMenuOpen) {
       pauseLocalPlayer();
+      setGrenadeArmed(false);
     }
     wasMenuOpen = gameMenu.open;
 
@@ -277,10 +338,14 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       actionBar.grenadeCooldownRemaining = grenadeCooldown;
     }
 
-    // Handle click for NPC selection
+    // Handle click — armed grenade throws to ground point, otherwise NPC select
     const click = input.consumeClick();
     if (!gameMenu.open && click) {
-      handleClick(click);
+      if (actionBar.grenadeArmed) {
+        handleGrenadeThrowClick(click);
+      } else {
+        handleNpcSelectClick(click);
+      }
     }
 
     // Handle F key for attack
@@ -311,27 +376,12 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       }
     }
 
-    // Handle 2 key for grenade
-    if (!gameMenu.open && input.wasGrenadePressed() && npcManager.selectedNpcId && grenadeCooldown <= 0 && player?.root) {
-      const npcId = npcManager.selectedNpcId;
-      const targetPos = npcManager.getNpcWorldPosition(npcId);
-      if (targetPos) {
-        const playerPos = player.root.position;
-        const dist = Math.sqrt(
-          (targetPos.x - playerPos.x) ** 2 + (targetPos.z - playerPos.z) ** 2
-        );
-
-        if (dist <= GRENADE_RANGE) {
-          grenadeCooldown = GRENADE_COOLDOWN;
-          actionBar.grenadeCooldownRemaining = GRENADE_COOLDOWN;
-          actionBar.grenadeCooldownTotal = GRENADE_COOLDOWN;
-
-          const startPos = player.root.position.clone();
-          startPos.y += 1.2;
-          const landPos = new Vector3(targetPos.x, 0, targetPos.z);
-          grenadeManager.throwAt(startPos, landPos);
-          network.sendGrenade(npcId);
-        }
+    // Handle 2 key for grenade — toggles armed; click then chooses landing point
+    if (!gameMenu.open && input.wasGrenadePressed() && player?.root) {
+      if (actionBar.grenadeArmed) {
+        setGrenadeArmed(false);
+      } else if (grenadeCooldown <= 0) {
+        setGrenadeArmed(true);
       }
     }
 

@@ -40,3 +40,7 @@ body {
 #game.dragging {
   cursor: grabbing;
 }
+
+#game.aiming {
+  cursor: crosshair;
+}

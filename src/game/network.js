@@ -76,9 +76,9 @@ export class NetworkManager {
     }
   }
 
-  sendGrenade(npcId) {
+  sendGrenade(x, z) {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "grenade", npcId }));
+      this.ws.send(JSON.stringify({ type: "grenade", x, z }));
     }
   }
 
