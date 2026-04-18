@@ -137,7 +137,7 @@ export const PLANE_AIM_DISTANCE = 12.0;
 
 // Plane bullets (RMB hold while flying)
 export const NPC_MAX_HP = 100;
-export const BULLET_DAMAGE = 10;
+export const BULLET_DAMAGE = 20;
 export const BULLET_FIRE_INTERVAL = 0.1;  // seconds between shots
 export const BULLET_SPEED = 70;
 export const BULLET_LIFETIME = 1.4;
@@ -145,7 +145,7 @@ export const BULLET_HIT_RADIUS = 0.85;
 export const BULLET_CONVERGE_DISTANCE = 50; // wing-tip tracers aim at a point along the crosshair direction
 // Ground impact: bullets that hit the dirt detonate in a small radius (mini-grenade)
 export const BULLET_GROUND_EXPLOSION_RADIUS = 2.5;
-export const BULLET_GROUND_EXPLOSION_DAMAGE = 100; // instakill anything inside the radius
+export const BULLET_GROUND_EXPLOSION_DAMAGE = 20; // matches direct-hit bullet damage
 
 // =============================================================================
 // XP / Leveling

@@ -25,6 +25,7 @@ export class InputManager {
     this._lookDy = 0;
     this._lockOnInteract = false;
     this.onPointerLockChange = null; // optional callback (locked: bool)
+    this.onPointerLockError = null;  // optional callback when a lock request is denied
 
     // Right mouse button held state
     this._rmbDown = false;
@@ -136,6 +137,14 @@ export class InputManager {
       this.onPointerLockChange?.(locked);
     };
 
+    // Fires when requestPointerLock is silently denied (e.g. Chrome's rate
+    // limit if you re-request within ~1.25s of the previous exit). Without
+    // this hook, the user gets stranded "in the plane" with no mouse-look
+    // because `pointerlockchange` never fires for a denied request.
+    this._onPointerLockError = () => {
+      this.onPointerLockError?.();
+    };
+
     // Register listeners
     window.addEventListener("keydown", this._onKeyDown);
     window.addEventListener("keyup", this._onKeyUp);
@@ -146,6 +155,7 @@ export class InputManager {
     domElement.addEventListener("wheel", this._onWheel, { passive: false });
     domElement.addEventListener("contextmenu", this._onContextMenu);
     document.addEventListener("pointerlockchange", this._onPointerLockChange);
+    document.addEventListener("pointerlockerror", this._onPointerLockError);
   }
 
   setLockOnInteract(value) {
@@ -251,6 +261,7 @@ export class InputManager {
     this.domElement.removeEventListener("wheel", this._onWheel);
     this.domElement.removeEventListener("contextmenu", this._onContextMenu);
     document.removeEventListener("pointerlockchange", this._onPointerLockChange);
+    document.removeEventListener("pointerlockerror", this._onPointerLockError);
     if (document.pointerLockElement === this.domElement) {
       document.exitPointerLock?.();
     }

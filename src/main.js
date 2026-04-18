@@ -43,6 +43,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs, existi
       exitPlaneLocally(true);
     }
   };
+  // If the browser silently denies the pointer-lock request (Chrome rate-limits
+  // re-requests within ~1.25s of the previous exit), bail out of the plane so
+  // the player isn't stranded flying with no mouse-look. `pointerlockchange`
+  // doesn't fire in this case — only `pointerlockerror` does.
+  input.onPointerLockError = () => {
+    if (planeUi.inPlane) exitPlaneLocally(true);
+  };
   const remotePlayers = new RemotePlayerManager(scene, modelUrl);
   const npcManager = new NpcManager(scene);
   const phoneProjectiles = new PhoneProjectileManager(scene);
