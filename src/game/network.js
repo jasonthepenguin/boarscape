@@ -13,6 +13,9 @@ export class NetworkManager {
     this.onNpcSpawned = null;
     this.onPlayerLevelUp = null;
     this.onGrenadeThrown = null;
+    this.onPlanePilot = null;
+    this.onPlaneRespawned = null;
+    this.onPlaneState = null;
   }
 
   connect(name, color) {
@@ -38,6 +41,7 @@ export class NetworkManager {
         } else if (msg.type === "positions") {
           this.onPositions?.(msg.players);
           if (msg.npcs) this.onNpcPositions?.(msg.npcs);
+          if (msg.plane) this.onPlaneState?.(msg.plane);
         } else if (msg.type === "npcHit") {
           this.onNpcHit?.(msg);
         } else if (msg.type === "npcDied") {
@@ -50,6 +54,10 @@ export class NetworkManager {
           this.onPlayerLevelUp?.(msg);
         } else if (msg.type === "grenadeThrown") {
           this.onGrenadeThrown?.(msg);
+        } else if (msg.type === "planePilot") {
+          this.onPlanePilot?.(msg);
+        } else if (msg.type === "planeRespawned") {
+          this.onPlaneRespawned?.(msg);
         }
       };
 
@@ -82,6 +90,24 @@ export class NetworkManager {
     }
   }
 
+  sendEnterPlane() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "enterPlane" }));
+    }
+  }
+
+  sendExitPlane(vx, vy, vz) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "exitPlane", vx, vy, vz }));
+    }
+  }
+
+  sendPlaneState(state) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "planeState", ...state }));
+    }
+  }
+
   disconnect() {
     this.ws?.close();
     this.ws = null;
@@ -96,5 +122,8 @@ export class NetworkManager {
     this.onNpcSpawned = null;
     this.onPlayerLevelUp = null;
     this.onGrenadeThrown = null;
+    this.onPlanePilot = null;
+    this.onPlaneRespawned = null;
+    this.onPlaneState = null;
   }
 }

@@ -22,10 +22,10 @@
     screen = "serverSelect";
   }
 
-  function handleServerJoined({ network, existingPlayers, existingNpcs }) {
+  function handleServerJoined({ network, existingPlayers, existingNpcs, existingPlane }) {
     screen = "game";
     gameMenu.open = false;
-    gameSession = onstart({ name: playerName, color: playerColor, network, existingPlayers, existingNpcs });
+    gameSession = onstart({ name: playerName, color: playerColor, network, existingPlayers, existingNpcs, existingPlane });
   }
 
   function handleResumeGame() {

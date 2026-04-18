@@ -109,6 +109,21 @@ export const GRENADE_ARC_HEIGHT = 5.0;
 export const GRENADE_EXPLOSION_DURATION = 0.8;
 
 // =============================================================================
+// Plane (red flyable plane)
+// =============================================================================
+export const PLANE_SPAWN_X = 7;
+export const PLANE_SPAWN_Y = 0.55;
+export const PLANE_SPAWN_Z = 0;
+export const PLANE_INTERACT_RADIUS = 5;
+export const PLANE_FORWARD_SPEED = 22;
+export const PLANE_PITCH_SPEED = 1.0;
+export const PLANE_YAW_SPEED = 0.9;
+export const PLANE_AUTOPILOT_DURATION = 3.0;
+export const PLANE_MIN_Y = 0.3;
+export const PLANE_CAMERA_OFFSET_Y = 2.0;
+export const PLANE_CAMERA_OFFSET_Z = 6.0;
+
+// =============================================================================
 // XP / Leveling
 // =============================================================================
 export const XP_PER_KILL = 500;

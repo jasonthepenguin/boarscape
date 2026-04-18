@@ -2,7 +2,7 @@ import "./style.css";
 
 import { mount } from "svelte";
 import App from "./App.svelte";
-import { loading, actionBar, playerStats, gameMenu, resetUiState } from "./ui/stores.svelte.js";
+import { loading, actionBar, playerStats, gameMenu, planeUi, resetUiState } from "./ui/stores.svelte.js";
 import { createScene } from "./game/scene.js";
 import { createEnvironment } from "./game/environment/index.js";
 import { InputManager } from "./game/input.js";
@@ -11,8 +11,9 @@ import { RemotePlayerManager } from "./game/remotePlayers.js";
 import { NpcManager } from "./game/npcManager.js";
 import { PhoneProjectileManager } from "./game/phoneProjectile.js";
 import { GrenadeManager, GrenadeAimer } from "./game/grenadeProjectile.js";
-import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
-import { DoubleSide, Mesh, MeshBasicMaterial, Plane, Raycaster, TorusGeometry, Vector2, Vector3 } from "three";
+import { Plane } from "./game/plane.js";
+import { ATTACK_COOLDOWN, ATTACK_RANGE, GRENADE_COOLDOWN, GRENADE_RANGE, PLANE_INTERACT_RADIUS, PLANE_SPAWN_X, PLANE_SPAWN_Y, PLANE_SPAWN_Z, XP_PER_KILL, XP_BASE_THRESHOLD, XP_THRESHOLD_INCREMENT } from "./config.js";
+import { DoubleSide, Mesh, MeshBasicMaterial, Plane as ThreePlane, Raycaster, TorusGeometry, Vector2, Vector3 } from "three";
 
 const modelUrl = new URL("../boar3.glb", import.meta.url).href;
 
@@ -24,7 +25,7 @@ mount(App, {
   },
 });
 
-function startGame({ name, color, network, existingPlayers, existingNpcs }) {
+function startGame({ name, color, network, existingPlayers, existingNpcs, existingPlane }) {
   const canvas = document.getElementById("game");
   canvas.style.display = "block";
 
@@ -41,11 +42,18 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const phoneProjectiles = new PhoneProjectileManager(scene);
   const grenadeManager = new GrenadeManager(scene);
   const grenadeAimer = new GrenadeAimer(scene);
+  const plane = new Plane(scene);
+  if (existingPlane) {
+    plane.snapTo(existingPlane.x, existingPlane.y, existingPlane.z, existingPlane.rx, existingPlane.ry, existingPlane.rz);
+    plane.setPilot(existingPlane.pilotId, network.playerId);
+  } else {
+    plane.snapTo(PLANE_SPAWN_X, PLANE_SPAWN_Y, PLANE_SPAWN_Z, 0, 0, 0);
+  }
 
   // Raycaster for NPC click selection + grenade ground targeting
   const raycaster = new Raycaster();
   const pointerNdc = new Vector2();
-  const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
+  const groundPlane = new ThreePlane(new Vector3(0, 1, 0), 0);
   const groundHit = new Vector3();
   let attackCooldown = 0;
   let grenadeCooldown = 0;
@@ -188,6 +196,22 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     const targetPos = new Vector3(msg.targetX, 0, msg.targetZ);
     grenadeManager.throwAt(startPos, targetPos);
   };
+  network.onPlaneState = (state) => {
+    plane.receiveState(state.x, state.y, state.z, state.rx, state.ry, state.rz);
+  };
+  network.onPlanePilot = (msg) => {
+    plane.setPilot(msg.pilotId, network.playerId);
+    // If we lost pilot status (e.g. server kicked us out), reset local UI
+    if (planeUi.inPlane && msg.pilotId !== network.playerId) {
+      exitPlaneLocally(false);
+    }
+  };
+  network.onPlaneRespawned = (msg) => {
+    if (msg.plane) {
+      plane.snapTo(msg.plane.x, msg.plane.y, msg.plane.z, msg.plane.rx, msg.plane.ry, msg.plane.rz);
+      plane.setPilot(msg.plane.pilotId, network.playerId);
+    }
+  };
   network.onPositions = (states) => {
     const remoteStates = states.filter((s) => s.id !== network.playerId);
     remotePlayers.updatePositions(remoteStates);
@@ -302,6 +326,45 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     return true;
   }
 
+  // ---- Plane interaction ----
+  let planeStateSendTimer = 0;
+
+  function enterPlaneLocally() {
+    if (!player?.root || planeUi.inPlane) return;
+    if (plane.pilotId && plane.pilotId !== network.playerId) return; // someone else is flying
+    planeUi.inPlane = true;
+    planeUi.promptVisible = false;
+    setGrenadeArmed(false);
+    npcManager.deselectNpc();
+    actionBar.selectedNpcId = null;
+    // Hide local boar visually so the camera shot is clean
+    player.root.visible = false;
+    // Tell the server we're claiming the cockpit; locally take pilot role now
+    plane.setPilot(network.playerId, network.playerId);
+    network.sendEnterPlane();
+  }
+
+  function exitPlaneLocally(notifyServer = true) {
+    if (!planeUi.inPlane) return;
+    planeUi.inPlane = false;
+    if (player?.root) {
+      // Drop the boar at the plane's current XZ on the ground
+      const pp = plane.root.position;
+      player.root.position.set(pp.x, env.groundY ?? 0, pp.z);
+      player.root.visible = true;
+      if (player.controller) {
+        player.controller.velocity.x = 0;
+        player.controller.velocity.y = 0;
+        player.controller.velocity.z = 0;
+      }
+    }
+    if (notifyServer) {
+      const v = plane.getCurrentVelocity();
+      network.sendExitPlane(v.vx, v.vy, v.vz);
+    }
+    plane.setPilot(null, network.playerId);
+  }
+
   let player = null;
   loading.text = "Loading player...";
 
@@ -343,13 +406,57 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       input.clearTransientInputs();
     }
 
-    if (!gameMenu.open && player?.controller) player.controller.update(dt);
-    if (player?.mixer) player.mixer.update(dt);
+    // E key: toggle plane occupancy
+    if (!gameMenu.open && input.wasInteractPressed() && player?.root) {
+      if (planeUi.inPlane) {
+        exitPlaneLocally(true);
+      } else {
+        const dx = plane.root.position.x - player.root.position.x;
+        const dy = plane.root.position.y - player.root.position.y;
+        const dz = plane.root.position.z - player.root.position.z;
+        const distSq = dx * dx + dy * dy + dz * dz;
+        if (distSq <= PLANE_INTERACT_RADIUS * PLANE_INTERACT_RADIUS) {
+          enterPlaneLocally();
+        }
+      }
+    }
+
+    // Boar physics + grenade aim only run when we're NOT flying
+    if (!planeUi.inPlane) {
+      if (!gameMenu.open && player?.controller) player.controller.update(dt);
+      if (player?.mixer) player.mixer.update(dt);
+    }
     remotePlayers.update(dt);
     npcManager.update(dt);
     phoneProjectiles.update(dt);
     grenadeManager.update(dt);
-    if (actionBar.grenadeArmed && player?.root) {
+
+    // Plane: local pilot drives state; otherwise interpolate to server state
+    if (planeUi.inPlane && player?.root) {
+      const newState = plane.flyLocal(input, dt);
+      plane.applyCameraChase(camera);
+      planeStateSendTimer += dt;
+      if (planeStateSendTimer >= 0.05) {
+        planeStateSendTimer = 0;
+        network.sendPlaneState(newState);
+      }
+    } else {
+      plane.update(dt);
+    }
+
+    // Proximity prompt for entering the plane
+    if (!planeUi.inPlane && player?.root) {
+      const dx = plane.root.position.x - player.root.position.x;
+      const dy = plane.root.position.y - player.root.position.y;
+      const dz = plane.root.position.z - player.root.position.z;
+      const closeEnough = (dx * dx + dy * dy + dz * dz) <= PLANE_INTERACT_RADIUS * PLANE_INTERACT_RADIUS;
+      const free = !plane.pilotId;
+      planeUi.promptVisible = closeEnough && free;
+    } else {
+      planeUi.promptVisible = false;
+    }
+
+    if (!planeUi.inPlane && actionBar.grenadeArmed && player?.root) {
       const aim = resolveAimTarget();
       if (aim) {
         const playerPos = player.root.position;
@@ -374,7 +481,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
     // Handle click — armed grenade throws to ground point, otherwise NPC select
     const click = input.consumeClick();
-    if (!gameMenu.open && click) {
+    if (!gameMenu.open && !planeUi.inPlane && click) {
       if (actionBar.grenadeArmed) {
         handleGrenadeThrowClick(click);
       } else {
@@ -383,7 +490,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     }
 
     // Handle 1 key for phone — selects slot 1 (disarming grenade), then fires if able
-    if (!gameMenu.open && input.wasAttackPressed() && player?.root) {
+    if (!gameMenu.open && !planeUi.inPlane && input.wasAttackPressed() && player?.root) {
       actionBar.selectedSlot = 1;
       if (actionBar.grenadeArmed) setGrenadeArmed(false);
 
@@ -414,7 +521,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     }
 
     // Handle 2 key for grenade — selects slot 2; toggles armed when allowed
-    if (!gameMenu.open && input.wasGrenadePressed() && player?.root) {
+    if (!gameMenu.open && !planeUi.inPlane && input.wasGrenadePressed() && player?.root) {
       actionBar.selectedSlot = 2;
       if (actionBar.grenadeArmed) {
         setGrenadeArmed(false);
@@ -423,8 +530,8 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       }
     }
 
-    // Send position to server
-    if (!gameMenu.open && player?.root) {
+    // Send position to server (paused while in plane — boar is hidden)
+    if (!gameMenu.open && !planeUi.inPlane && player?.root) {
       sendTimer += dt;
       if (sendTimer >= 0.05) {
         sendTimer = 0;

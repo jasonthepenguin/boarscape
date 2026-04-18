@@ -5,6 +5,7 @@ export class InputManager {
     this._jumpPressed = false;
     this._attackPressed = false;
     this._grenadePressed = false;
+    this._interactPressed = false;
 
     // Pointer drag state
     this._dragging = false;
@@ -39,6 +40,9 @@ export class InputManager {
       }
       if (e.code === "Digit2" && !e.repeat) {
         this._grenadePressed = true;
+      }
+      if (e.code === "KeyE" && !e.repeat) {
+        this._interactPressed = true;
       }
     };
 
@@ -137,6 +141,14 @@ export class InputManager {
     return false;
   }
 
+  wasInteractPressed() {
+    if (this._interactPressed) {
+      this._interactPressed = false;
+      return true;
+    }
+    return false;
+  }
+
   consumeClick() {
     const click = this._clickEvent;
     this._clickEvent = null;
@@ -165,6 +177,7 @@ export class InputManager {
     this._jumpPressed = false;
     this._attackPressed = false;
     this._grenadePressed = false;
+    this._interactPressed = false;
     this._clickEvent = null;
     this._pointerDx = 0;
     this._pointerDy = 0;

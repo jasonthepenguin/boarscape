@@ -1,5 +1,5 @@
 <script>
-  import { loading, actionBar, playerStats } from "./stores.svelte.js";
+  import { loading, actionBar, playerStats, planeUi } from "./stores.svelte.js";
   import EscMenu from "./EscMenu.svelte";
 
   let { onresume, onleave } = $props();
@@ -35,6 +35,15 @@
     <div class="level-badge">{playerStats.level}</div>
   </div>
 
+  {#if planeUi.promptVisible && !planeUi.inPlane}
+    <div class="plane-prompt"><span class="key">E</span> Enter plane</div>
+  {/if}
+
+  {#if planeUi.inPlane}
+    <div class="plane-prompt"><span class="key">E</span> Exit plane &nbsp;·&nbsp; <span class="key">W</span>/<span class="key">S</span> pitch &nbsp;·&nbsp; <span class="key">A</span>/<span class="key">D</span> yaw</div>
+  {/if}
+
+  {#if !planeUi.inPlane}
   <div class="action-bar">
     <div class="action-slot active" class:ready={canAttack} class:selected={actionBar.selectedSlot === 1}>
       <div class="slot-key">1</div>
@@ -56,6 +65,7 @@
       </div>
     {/each}
   </div>
+  {/if}
 
   <div class="bars-container">
     <div class="stat-bar health-bar">
@@ -384,5 +394,25 @@
     color: #fff;
     font-size: 11px;
     margin-right: 4px;
+  }
+
+  .plane-prompt {
+    position: absolute;
+    bottom: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 18px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, var(--rs-brown-light) 0%, var(--rs-brown) 100%);
+    border: 2px solid var(--rs-gold-dark);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 4px 10px rgba(0, 0, 0, 0.6);
+    color: var(--rs-gold);
+    font-family: "MedievalSharp", cursive;
+    font-size: 14px;
+    letter-spacing: 1px;
+    user-select: none;
+    pointer-events: none;
   }
 </style>
