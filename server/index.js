@@ -1,18 +1,9 @@
 import { WebSocketServer } from "ws";
-import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, killNpc, damageNpc } from "./npcs.js";
+import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, killNpc } from "./npcs.js";
 import {
   GRENADE_RANGE,
   GRENADE_FUSE,
   GRENADE_EXPLOSION_RADIUS,
-  PLANE_SPAWN_X,
-  PLANE_SPAWN_Y,
-  PLANE_SPAWN_Z,
-  PLANE_AUTOPILOT_DURATION,
-  PLANE_MIN_Y,
-  BULLET_DAMAGE,
-  BULLET_GROUND_EXPLOSION_RADIUS,
-  BULLET_GROUND_EXPLOSION_DAMAGE,
-  FIELD_SIZE,
 } from "../src/config.js";
 import { NPC_RESPAWN_DELAY } from "../src/config.js";
 
@@ -27,23 +18,6 @@ let nextId = 1;
 let nextNpcIndex = npcs.length;
 const respawnQueue = []; // { timer, index }
 const pendingGrenades = []; // { timer, x, z, attackerId }
-
-// Plane: single shared instance
-const plane = {
-  x: PLANE_SPAWN_X, y: PLANE_SPAWN_Y, z: PLANE_SPAWN_Z,
-  rx: 0, ry: 0, rz: 0,
-  vx: 0, vy: 0, vz: 0,
-  pilotId: null,
-  autopilotTimer: 0,
-};
-
-function planeStateForBroadcast() {
-  return {
-    x: plane.x, y: plane.y, z: plane.z,
-    rx: plane.rx, ry: plane.ry, rz: plane.rz,
-    pilotId: plane.pilotId,
-  };
-}
 
 wss.on("connection", (ws) => {
   let playerId = null;
@@ -94,7 +68,7 @@ wss.on("connection", (ws) => {
           });
         }
       }
-      ws.send(JSON.stringify({ type: "joined", id: playerId, players: others, npcs: serializeNpcs(npcs), plane: planeStateForBroadcast() }));
+      ws.send(JSON.stringify({ type: "joined", id: playerId, players: others, npcs: serializeNpcs(npcs) }));
 
       // Notify everyone else
       broadcast(
@@ -185,103 +159,6 @@ wss.on("connection", (ws) => {
       });
     }
 
-    if (msg.type === "bulletHit" && playerId) {
-      // Only the current pilot can claim bullet hits
-      if (plane.pilotId !== playerId) return;
-      const npc = npcs.find(n => n.id === msg.npcId);
-      if (!npc || npc.state === "dead") return;
-
-      const result = damageNpc(npc, BULLET_DAMAGE);
-      if (!result) return;
-
-      broadcast({
-        type: "npcDamaged",
-        npcId: npc.id,
-        hp: npc.hp,
-        attackerId: playerId,
-      });
-
-      if (result.died) {
-        broadcast({
-          type: "npcDied",
-          npcId: npc.id,
-          killerId: playerId,
-        });
-      }
-    }
-
-    if (msg.type === "bulletGroundHit" && playerId) {
-      // Only the pilot can spawn ground explosions (their bullets only).
-      if (plane.pilotId !== playerId) return;
-      const x = Number(msg.x);
-      const z = Number(msg.z);
-      if (!Number.isFinite(x) || !Number.isFinite(z)) return;
-      // Reject anything outside the playfield (paranoia/cheat guard).
-      const half = FIELD_SIZE / 2;
-      if (Math.abs(x) > half || Math.abs(z) > half) return;
-
-      const radiusSq = BULLET_GROUND_EXPLOSION_RADIUS * BULLET_GROUND_EXPLOSION_RADIUS;
-      for (const npc of npcs) {
-        if (npc.state === "dead") continue;
-        const dx = npc.x - x;
-        const dz = npc.z - z;
-        if (dx * dx + dz * dz > radiusSq) continue;
-
-        const result = damageNpc(npc, BULLET_GROUND_EXPLOSION_DAMAGE);
-        if (!result) continue;
-
-        broadcast({
-          type: "npcDamaged",
-          npcId: npc.id,
-          hp: npc.hp,
-          attackerId: playerId,
-        });
-
-        if (result.died) {
-          broadcast({
-            type: "npcDied",
-            npcId: npc.id,
-            killerId: playerId,
-          });
-        }
-      }
-
-      // Tell every other client to render the boom (pilot already rendered it locally).
-      broadcast({
-        type: "bulletExplosion",
-        x,
-        z,
-        attackerId: playerId,
-      });
-    }
-
-    if (msg.type === "enterPlane" && playerId) {
-      if (plane.pilotId && plane.pilotId !== playerId) return;
-      plane.pilotId = playerId;
-      plane.autopilotTimer = 0;
-      broadcast({ type: "planePilot", pilotId: playerId });
-    }
-
-    if (msg.type === "exitPlane" && playerId) {
-      if (plane.pilotId !== playerId) return;
-      plane.pilotId = null;
-      plane.vx = Number(msg.vx) || 0;
-      plane.vy = Number(msg.vy) || 0;
-      plane.vz = Number(msg.vz) || 0;
-      plane.autopilotTimer = PLANE_AUTOPILOT_DURATION;
-      broadcast({ type: "planePilot", pilotId: null });
-    }
-
-    if (msg.type === "planeState" && playerId) {
-      if (plane.pilotId !== playerId) return;
-      if (!Number.isFinite(msg.x) || !Number.isFinite(msg.y) || !Number.isFinite(msg.z)) return;
-      plane.x = msg.x; plane.y = msg.y; plane.z = msg.z;
-      plane.rx = msg.rx; plane.ry = msg.ry; plane.rz = msg.rz;
-      plane.vx = Number(msg.vx) || 0;
-      plane.vy = Number(msg.vy) || 0;
-      plane.vz = Number(msg.vz) || 0;
-    }
-
     if (msg.type === "levelUp" && playerId) {
       const player = players.get(playerId);
       if (!player) return;
@@ -300,13 +177,6 @@ wss.on("connection", (ws) => {
       );
       players.delete(playerId);
       broadcast({ type: "playerLeft", id: playerId });
-
-      // If they were piloting the plane, kick off autopilot mode
-      if (plane.pilotId === playerId) {
-        plane.pilotId = null;
-        plane.autopilotTimer = PLANE_AUTOPILOT_DURATION;
-        broadcast({ type: "planePilot", pilotId: null });
-      }
     }
   });
 });
@@ -370,24 +240,6 @@ setInterval(() => {
     }
   }
 
-  // Plane autopilot — coast for a few seconds after pilot exits, then respawn
-  if (!plane.pilotId && plane.autopilotTimer > 0) {
-    plane.x += plane.vx * tickDt;
-    plane.y += plane.vy * tickDt;
-    plane.z += plane.vz * tickDt;
-    plane.autopilotTimer -= tickDt;
-
-    if (plane.autopilotTimer <= 0 || plane.y < PLANE_MIN_Y) {
-      plane.x = PLANE_SPAWN_X;
-      plane.y = PLANE_SPAWN_Y;
-      plane.z = PLANE_SPAWN_Z;
-      plane.rx = 0; plane.ry = 0; plane.rz = 0;
-      plane.vx = 0; plane.vy = 0; plane.vz = 0;
-      plane.autopilotTimer = 0;
-      broadcast({ type: "planeRespawned", plane: planeStateForBroadcast() });
-    }
-  }
-
   if (players.size === 0) return;
 
   const playerStates = [];
@@ -406,7 +258,6 @@ setInterval(() => {
     type: "positions",
     players: playerStates,
     npcs: serializeNpcs(npcs),
-    plane: planeStateForBroadcast(),
   });
   for (const [, p] of players) {
     if (p.ws.readyState === 1) {

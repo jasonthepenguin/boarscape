@@ -1,4 +1,4 @@
-import { NPC_COUNT, NPC_WALK_SPEED, FIELD_SIZE, NPC_MAX_ADDICTION, NPC_DESPAWN_DELAY, NPC_MAX_HP } from "../src/config.js";
+import { NPC_COUNT, NPC_WALK_SPEED, FIELD_SIZE, NPC_MAX_ADDICTION, NPC_DESPAWN_DELAY } from "../src/config.js";
 
 const BOUNDS_HALF = FIELD_SIZE / 2;
 const BOUNDS_MARGIN = 4;
@@ -28,7 +28,6 @@ export function createNpc(index) {
     stateTimer: 0,
     nextChange: 1 + Math.random() * 3,
     addiction: 0,
-    hp: NPC_MAX_HP,
   };
 }
 
@@ -66,22 +65,7 @@ export function killNpc(npc) {
   npc.vz = 0;
   npc.deathTimer = 0;
   npc.addiction = NPC_MAX_ADDICTION;
-  npc.hp = 0;
   return { killed: true };
-}
-
-export function damageNpc(npc, amount) {
-  if (npc.state === "dead") return null;
-  npc.hp = Math.max(0, npc.hp - amount);
-  if (npc.hp <= 0) {
-    npc.state = "dead";
-    npc.anim = "dead";
-    npc.vx = 0;
-    npc.vz = 0;
-    npc.deathTimer = 0;
-    return { hit: true, died: true };
-  }
-  return { hit: true, died: false };
 }
 
 export function updateNpcs(npcs, dt) {
@@ -141,6 +125,5 @@ export function serializeNpcs(npcs) {
     ry: n.ry,
     anim: n.anim,
     addiction: n.addiction,
-    hp: n.hp,
   }));
 }

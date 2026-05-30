@@ -13,11 +13,6 @@ export class NetworkManager {
     this.onNpcSpawned = null;
     this.onPlayerLevelUp = null;
     this.onGrenadeThrown = null;
-    this.onPlanePilot = null;
-    this.onPlaneRespawned = null;
-    this.onPlaneState = null;
-    this.onNpcDamaged = null;
-    this.onBulletExplosion = null;
   }
 
   connect(name, color) {
@@ -43,7 +38,6 @@ export class NetworkManager {
         } else if (msg.type === "positions") {
           this.onPositions?.(msg.players);
           if (msg.npcs) this.onNpcPositions?.(msg.npcs);
-          if (msg.plane) this.onPlaneState?.(msg.plane);
         } else if (msg.type === "npcHit") {
           this.onNpcHit?.(msg);
         } else if (msg.type === "npcDied") {
@@ -56,14 +50,6 @@ export class NetworkManager {
           this.onPlayerLevelUp?.(msg);
         } else if (msg.type === "grenadeThrown") {
           this.onGrenadeThrown?.(msg);
-        } else if (msg.type === "npcDamaged") {
-          this.onNpcDamaged?.(msg);
-        } else if (msg.type === "planePilot") {
-          this.onPlanePilot?.(msg);
-        } else if (msg.type === "planeRespawned") {
-          this.onPlaneRespawned?.(msg);
-        } else if (msg.type === "bulletExplosion") {
-          this.onBulletExplosion?.(msg);
         }
       };
 
@@ -96,36 +82,6 @@ export class NetworkManager {
     }
   }
 
-  sendEnterPlane() {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "enterPlane" }));
-    }
-  }
-
-  sendExitPlane(vx, vy, vz) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "exitPlane", vx, vy, vz }));
-    }
-  }
-
-  sendPlaneState(state) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "planeState", ...state }));
-    }
-  }
-
-  sendBulletHit(npcId) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "bulletHit", npcId }));
-    }
-  }
-
-  sendBulletGroundHit(x, z) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "bulletGroundHit", x, z }));
-    }
-  }
-
   disconnect() {
     this.ws?.close();
     this.ws = null;
@@ -140,10 +96,5 @@ export class NetworkManager {
     this.onNpcSpawned = null;
     this.onPlayerLevelUp = null;
     this.onGrenadeThrown = null;
-    this.onPlanePilot = null;
-    this.onPlaneRespawned = null;
-    this.onPlaneState = null;
-    this.onNpcDamaged = null;
-    this.onBulletExplosion = null;
   }
 }

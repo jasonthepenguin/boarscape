@@ -13,7 +13,7 @@ import {
   TorusGeometry,
 } from "three";
 import { createNametag } from "./player.js";
-import { SELECTION_RING_RADIUS, SELECTION_RING_TUBE, NPC_DEATH_ANIM_DURATION, NPC_MAX_ADDICTION, NPC_MAX_HP } from "../config.js";
+import { SELECTION_RING_RADIUS, SELECTION_RING_TUBE, NPC_DEATH_ANIM_DURATION, NPC_MAX_ADDICTION } from "../config.js";
 
 const TICK_RATE = 20;
 
@@ -143,72 +143,6 @@ function createAddictionBar() {
   return { sprite, canvas, texture };
 }
 
-function createHealthBar() {
-  // Match the addiction bar's canvas size and sprite scale so they read at
-  // the same visual scale above the NPC.
-  const w = 128;
-  const h = 32;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-
-  const texture = new CanvasTexture(canvas);
-  texture.needsUpdate = true;
-
-  const material = new SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-  });
-
-  const sprite = new Sprite(material);
-  const aspect = w / h;
-  sprite.scale.set(0.6 * aspect, 0.6, 1);
-  sprite.visible = false; // hidden until first damage
-
-  return { sprite, canvas, texture };
-}
-
-function drawHealthBar(canvas, texture, hp) {
-  const ctx = canvas.getContext("2d");
-  const w = canvas.width;
-  const h = canvas.height;
-  const radius = 4;
-  // Center the bar vertically within the canvas (no label, just the bar)
-  const barH = 16;
-  const barY = (h - barH) / 2;
-
-  ctx.clearRect(0, 0, w, h);
-
-  // Bar background
-  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-  ctx.beginPath();
-  ctx.roundRect(0, barY, w, barH, radius);
-  ctx.fill();
-
-  // Fill — green → yellow → red as HP drops
-  const pct = Math.max(0, Math.min(1, hp / NPC_MAX_HP));
-  const fillW = Math.max(0, (w - 4) * pct);
-  if (fillW > 0) {
-    const r = Math.min(255, Math.floor(255 * (1 - pct) * 2));
-    const g = Math.min(255, Math.floor(255 * pct * 2));
-    ctx.fillStyle = `rgb(${r}, ${g}, 40)`;
-    ctx.beginPath();
-    ctx.roundRect(2, barY + 2, fillW, barH - 4, Math.max(0, radius - 1));
-    ctx.fill();
-  }
-
-  // Border
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(0, barY, w, barH, radius);
-  ctx.stroke();
-
-  texture.needsUpdate = true;
-}
-
 function drawAddictionBar(canvas, texture, addiction) {
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
@@ -309,14 +243,9 @@ export class NpcManager {
     nametag.position.y = 1.8;
     root.add(nametag);
 
-    // Health bar (just above nametag)
-    const { sprite: healthSprite, canvas: healthCanvas, texture: healthTexture } = createHealthBar();
-    healthSprite.position.y = 2.05;
-    root.add(healthSprite);
-
-    // Addiction bar (above the health bar)
+    // Addiction bar (above the nametag)
     const { sprite: addictionSprite, canvas: addictionCanvas, texture: addictionTexture } = createAddictionBar();
-    addictionSprite.position.y = 2.55;
+    addictionSprite.position.y = 2.2;
     root.add(addictionSprite);
 
     this.scene.add(root);
@@ -334,16 +263,12 @@ export class NpcManager {
       nextX: 0, nextY: 0, nextZ: 0, nextRy: 0,
       t: 1,
       addiction: 0,
-      hp: NPC_MAX_HP,
       dead: false,
       deathTime: 0,
       deathMaterials: null,
       addictionSprite,
       addictionCanvas,
       addictionTexture,
-      healthSprite,
-      healthCanvas,
-      healthTexture,
     });
   }
 
@@ -369,18 +294,6 @@ export class NpcManager {
     }
   }
 
-  setHp(id, hp) {
-    const npc = this.npcs.get(id);
-    if (!npc) return;
-    npc.hp = hp;
-
-    // Show and redraw the health bar when the NPC has taken any damage
-    if (hp < NPC_MAX_HP && npc.healthSprite) {
-      npc.healthSprite.visible = true;
-      drawHealthBar(npc.healthCanvas, npc.healthTexture, hp);
-    }
-  }
-
   killNpc(id) {
     const npc = this.npcs.get(id);
     if (!npc) return;
@@ -395,9 +308,6 @@ export class NpcManager {
     npc.nametag.visible = false;
     if (npc.addictionSprite) {
       npc.addictionSprite.visible = false;
-    }
-    if (npc.healthSprite) {
-      npc.healthSprite.visible = false;
     }
 
     // Clone materials so death animation doesn't affect shared geometry

@@ -109,45 +109,6 @@ export const GRENADE_ARC_HEIGHT = 5.0;
 export const GRENADE_EXPLOSION_DURATION = 0.8;
 
 // =============================================================================
-// Plane (red flyable plane)
-// =============================================================================
-export const PLANE_SPAWN_X = 7;
-export const PLANE_SPAWN_Y = 0.55;
-export const PLANE_SPAWN_Z = 0;
-export const PLANE_INTERACT_RADIUS = 5;
-export const PLANE_MAX_SPEED = 28;
-export const PLANE_THROTTLE_ACCEL = 14;   // m/s^2 while W is held
-export const PLANE_THROTTLE_DECEL = 18;   // m/s^2 while S is held
-export const PLANE_THROTTLE_DRAG = 4;     // m/s^2 passive decel when no input
-export const PLANE_PITCH_SPEED = 1.0;
-export const PLANE_YAW_SPEED = 0.9;
-export const PLANE_MOUSE_PITCH_SENS = 0.0022;  // radians per pixel of mouse movement
-export const PLANE_MOUSE_YAW_SENS = 0.0026;
-export const PLANE_AUTOPILOT_DURATION = 3.0;
-export const PLANE_MIN_Y = 0.3;
-export const PLANE_MAX_Y = 50;
-export const PLANE_BOUNDS_MARGIN = 4;
-export const PLANE_CAMERA_OFFSET_Y = 1.5;
-export const PLANE_CAMERA_OFFSET_Z = 6.0;
-// Aim offset MUST equal camera offset Y so the camera's forward direction is
-// parallel to the plane's nose — that way the crosshair, the bullets, and the
-// flight path all line up exactly.
-export const PLANE_AIM_OFFSET_Y = 1.5;
-export const PLANE_AIM_DISTANCE = 12.0;
-
-// Plane bullets (RMB hold while flying)
-export const NPC_MAX_HP = 100;
-export const BULLET_DAMAGE = 20;
-export const BULLET_FIRE_INTERVAL = 0.1;  // seconds between shots
-export const BULLET_SPEED = 70;
-export const BULLET_LIFETIME = 1.4;
-export const BULLET_HIT_RADIUS = 0.85;
-export const BULLET_CONVERGE_DISTANCE = 50; // wing-tip tracers aim at a point along the crosshair direction
-// Ground impact: bullets that hit the dirt detonate in a small radius (mini-grenade)
-export const BULLET_GROUND_EXPLOSION_RADIUS = 2.5;
-export const BULLET_GROUND_EXPLOSION_DAMAGE = 20; // matches direct-hit bullet damage
-
-// =============================================================================
 // XP / Leveling
 // =============================================================================
 export const XP_PER_KILL = 500;

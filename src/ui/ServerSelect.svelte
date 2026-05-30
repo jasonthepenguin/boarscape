@@ -15,7 +15,7 @@
     const network = new NetworkManager(SERVER_URL);
     try {
       const result = await network.connect(name, color);
-      onjoin({ network, existingPlayers: result.players, existingNpcs: result.npcs || [], existingPlane: result.plane || null });
+      onjoin({ network, existingPlayers: result.players, existingNpcs: result.npcs || [] });
     } catch (err) {
       status = "error";
       errorMsg = err.message;

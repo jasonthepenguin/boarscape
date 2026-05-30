@@ -120,8 +120,6 @@ export class RemotePlayerManager {
   removePlayer(id) {
     const player = this.players.get(id);
     if (!player) return;
-    // Use parent.remove rather than scene.remove — remote boars may be
-    // reparented (e.g. seated inside the plane).
     player.root.parent?.remove(player.root);
     player.mixer?.stopAllAction();
     this.players.delete(id);

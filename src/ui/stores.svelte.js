@@ -19,8 +19,6 @@ let _grenadeCooldownTotal = $state(0);
 let _grenadeArmed = $state(false);
 let _selectedSlot = $state(null);
 let _selectedNpcId = $state(null);
-let _planePromptVisible = $state(false);
-let _inPlane = $state(false);
 
 export const actionBar = {
   get cooldownRemaining() { return _cooldownRemaining; },
@@ -37,13 +35,6 @@ export const actionBar = {
   set selectedSlot(v) { _selectedSlot = v; },
   get selectedNpcId() { return _selectedNpcId; },
   set selectedNpcId(v) { _selectedNpcId = v; },
-};
-
-export const planeUi = {
-  get promptVisible() { return _planePromptVisible; },
-  set promptVisible(v) { _planePromptVisible = v; },
-  get inPlane() { return _inPlane; },
-  set inPlane(v) { _inPlane = v; },
 };
 
 // Player stats (XP / leveling)
@@ -79,8 +70,6 @@ export function resetUiState() {
   _grenadeArmed = false;
   _selectedSlot = null;
   _selectedNpcId = null;
-  _planePromptVisible = false;
-  _inPlane = false;
   _xp = 0;
   _level = 1;
   _xpForNextLevel = 1000;
