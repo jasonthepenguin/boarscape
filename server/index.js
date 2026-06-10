@@ -61,7 +61,7 @@ const httpServer = createServer(async (req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({ server: httpServer, maxPayload: 4096 });
 const players = new Map();
 const npcs = createNpcs();
 let nextId = 1;
@@ -69,10 +69,116 @@ let nextNpcIndex = npcs.length;
 const respawnQueue = []; // { timer, index }
 const pendingGrenades = []; // { timer, x, z, attackerId }
 
-wss.on("connection", (ws) => {
+// =============================================================================
+// Connection protection
+// =============================================================================
+const MAX_CONNECTIONS_PER_IP = 4;
+const MAX_CONNECTS_PER_WINDOW = 8;
+const CONNECT_WINDOW_MS = 10_000;
+const MAX_MESSAGES_PER_SECOND = 60;
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
+const ipConnections = new Map(); // ip -> live connection count
+const ipConnectWindows = new Map(); // ip -> { windowStart, count }
+
+// Behind Railway, the rightmost x-forwarded-for entry is the trusted client
+// IP. Behind Cloudflare, Railway sees Cloudflare's edge as the client, and the
+// real IP arrives in cf-connecting-ip — set TRUST_CF_HEADER=1 when moving to
+// Cloudflare. (Don't trust cf-connecting-ip otherwise: clients can forge it.)
+function getClientIp(req) {
+  if (process.env.TRUST_CF_HEADER === "1" && req.headers["cf-connecting-ip"]) {
+    return req.headers["cf-connecting-ip"];
+  }
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) {
+    const parts = forwarded.split(",");
+    return parts[parts.length - 1].trim();
+  }
+  return req.socket.remoteAddress || "unknown";
+}
+
+function rejectConnection(ws, reason) {
+  ws.send(JSON.stringify({ type: "rejected", reason }));
+  ws.close(4000, reason);
+}
+
+// Heartbeat: terminate connections that stop answering pings, so dead
+// tabs/sleeping laptops free their player slots. Also prune stale
+// connect-rate windows while we're at it.
+setInterval(() => {
+  for (const ws of wss.clients) {
+    if (!ws.isAlive) {
+      ws.terminate();
+      continue;
+    }
+    ws.isAlive = false;
+    ws.ping();
+  }
+  const now = Date.now();
+  for (const [ip, win] of ipConnectWindows) {
+    if (now - win.windowStart > CONNECT_WINDOW_MS) ipConnectWindows.delete(ip);
+  }
+}, HEARTBEAT_INTERVAL_MS);
+
+wss.on("connection", (ws, req) => {
   let playerId = null;
+  const ip = getClientIp(req);
+
+  // Without this, a protocol error (e.g. payload over maxPayload) emits an
+  // unhandled 'error' event and crashes the whole process. ws closes the
+  // offending connection itself (1009); we just need to not die.
+  ws.on("error", (err) => {
+    console.log(`Socket error from ${ip}: ${err.message}`);
+  });
+
+  // Per-IP concurrent connection cap (e.g. someone opening 30 tabs)
+  const liveCount = (ipConnections.get(ip) || 0) + 1;
+  if (liveCount > MAX_CONNECTIONS_PER_IP) {
+    rejectConnection(ws, "Too many connections from your network");
+    return;
+  }
+  ipConnections.set(ip, liveCount);
+  ws.on("close", () => {
+    const n = (ipConnections.get(ip) || 1) - 1;
+    if (n <= 0) ipConnections.delete(ip);
+    else ipConnections.set(ip, n);
+  });
+
+  // Per-IP connect rate limit (reconnect spam)
+  const now = Date.now();
+  const win = ipConnectWindows.get(ip);
+  if (!win || now - win.windowStart > CONNECT_WINDOW_MS) {
+    ipConnectWindows.set(ip, { windowStart: now, count: 1 });
+  } else if (++win.count > MAX_CONNECTS_PER_WINDOW) {
+    rejectConnection(ws, "Reconnecting too fast, slow down");
+    return;
+  }
+
+  // Heartbeat state
+  ws.isAlive = true;
+  ws.on("pong", () => {
+    ws.isAlive = true;
+  });
+
+  // Per-connection message rate limit
+  let msgWindowStart = Date.now();
+  let msgCount = 0;
+  let kicked = false;
 
   ws.on("message", (raw) => {
+    if (kicked) return;
+    const nowMs = Date.now();
+    if (nowMs - msgWindowStart >= 1000) {
+      msgWindowStart = nowMs;
+      msgCount = 0;
+    }
+    if (++msgCount > MAX_MESSAGES_PER_SECOND) {
+      kicked = true;
+      console.log(`Kicking ${ip} (player ${playerId ?? "?"}): message flood`);
+      ws.terminate();
+      return;
+    }
+
     let msg;
     try {
       msg = JSON.parse(raw);

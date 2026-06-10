@@ -1,5 +1,6 @@
 node_modules/
 dist/
+PROGRESS.md
 .DS_Store
 .env
 .env.*

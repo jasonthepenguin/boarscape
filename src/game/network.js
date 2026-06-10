@@ -31,6 +31,8 @@ export class NetworkManager {
           resolve(msg);
         } else if (msg.type === "full") {
           reject(new Error("Server is full"));
+        } else if (msg.type === "rejected") {
+          reject(new Error(msg.reason || "Connection rejected"));
         } else if (msg.type === "playerJoined") {
           this.onPlayerJoined?.(msg);
         } else if (msg.type === "playerLeft") {
@@ -54,7 +56,9 @@ export class NetworkManager {
       };
 
       this.ws.onerror = () => reject(new Error("Could not connect to server"));
-      this.ws.onclose = () => {};
+      // No-op if connect already resolved/rejected; otherwise the server
+      // closed on us before "joined" (e.g. kicked) and we must settle.
+      this.ws.onclose = () => reject(new Error("Connection closed by server"));
     });
   }
 
