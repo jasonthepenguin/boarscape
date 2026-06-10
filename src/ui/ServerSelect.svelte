@@ -6,7 +6,14 @@
   let status = $state("idle");
   let errorMsg = $state("");
 
-  const SERVER_URL = import.meta.env.VITE_SERVER_URL || "ws://localhost:3001";
+  // Production: the Node server hosts both the site and the WebSocket on one
+  // port, so derive the socket URL from the page. Dev: Vite serves the client
+  // on its own port, so fall back to the local game server.
+  const SERVER_URL =
+    import.meta.env.VITE_SERVER_URL ||
+    (import.meta.env.DEV
+      ? "ws://localhost:3001"
+      : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`);
 
   async function joinServer() {
     status = "connecting";

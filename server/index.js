@@ -1,3 +1,7 @@
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, killNpc } from "./npcs.js";
 import {
@@ -8,11 +12,56 @@ import {
   NPC_RESPAWN_DELAY,
 } from "../src/config.js";
 
-const PORT = 3001;
+const PORT = Number(process.env.PORT) || 3001;
 const MAX_PLAYERS = 30;
 const TICK_RATE = 20;
 
-const wss = new WebSocketServer({ port: PORT });
+// Serve the built client (dist/) from the same process so site + game server
+// share one host/port in production. In dev, Vite serves the client instead
+// and this just 404s (harmlessly) for anything but the WebSocket upgrade.
+const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist");
+const MIME_TYPES = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+  ".glb": "model/gltf-binary",
+};
+
+const httpServer = createServer(async (req, res) => {
+  try {
+    const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    let filePath = path.normalize(path.join(distDir, urlPath));
+    if (!filePath.startsWith(distDir)) {
+      res.writeHead(403);
+      res.end();
+      return;
+    }
+    if (urlPath === "/" || urlPath === "") {
+      filePath = path.join(distDir, "index.html");
+    }
+
+    let data;
+    try {
+      data = await readFile(filePath);
+    } catch {
+      // SPA fallback — unknown paths get the app shell
+      filePath = path.join(distDir, "index.html");
+      data = await readFile(filePath);
+    }
+
+    res.writeHead(200, { "Content-Type": MIME_TYPES[path.extname(filePath)] ?? "application/octet-stream" });
+    res.end(data);
+  } catch {
+    res.writeHead(500);
+    res.end();
+  }
+});
+
+const wss = new WebSocketServer({ server: httpServer });
 const players = new Map();
 const npcs = createNpcs();
 let nextId = 1;
@@ -274,6 +323,8 @@ setInterval(() => {
   }
 }, 1000 / TICK_RATE);
 
-console.log(`BoarScape server running on ws://localhost:${PORT}`);
-console.log(`Max players: ${MAX_PLAYERS}, tick rate: ${TICK_RATE}Hz`);
-console.log(`${npcs.length} NPCs spawned`);
+httpServer.listen(PORT, () => {
+  console.log(`BoarScape server running on http://localhost:${PORT} (ws on same port)`);
+  console.log(`Max players: ${MAX_PLAYERS}, tick rate: ${TICK_RATE}Hz`);
+  console.log(`${npcs.length} NPCs spawned`);
+});
