@@ -46,7 +46,6 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
   const raycaster = new Raycaster();
   const pointerNdc = new Vector2();
   const groundPlane = new ThreePlane(new Vector3(0, 1, 0), 0);
-  const groundHit = new Vector3();
   let attackCooldown = 0;
   let grenadeCooldown = 0;
   let levelUpAura = null;
@@ -74,14 +73,13 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     }
   }
 
-  // Resolve current mouse position to a clamped throw target on the ground
-  // plane. Returns null if no plane intersection (e.g. camera looking up).
+  // Resolve a screen position to a clamped throw target on the ground plane.
+  // Returns null if no plane intersection (e.g. camera looking up).
   const aimerTarget = new Vector3();
-  function resolveAimTarget() {
+  function resolveAimTarget(screenX, screenY) {
     if (!player?.root) return null;
-    const ptr = input.getPointerPosition();
-    pointerNdc.x = (ptr.x / window.innerWidth) * 2 - 1;
-    pointerNdc.y = -(ptr.y / window.innerHeight) * 2 + 1;
+    pointerNdc.x = (screenX / window.innerWidth) * 2 - 1;
+    pointerNdc.y = -(screenY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointerNdc, camera);
 
     const hit = raycaster.ray.intersectPlane(groundPlane, aimerTarget);
@@ -126,7 +124,10 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
     // Level up glow + nametag + network broadcast
     if (lvl > oldLevel) {
-      if (player?.root) levelUpAura = createLevelUpAura(player.root);
+      if (player?.root) {
+        levelUpAura?.cancel();
+        levelUpAura = createLevelUpAura(player.root);
+      }
       if (player?.nametag) updateNametag(player.nametag, player.name, lvl);
       network.sendLevelUp(lvl);
     }
@@ -134,11 +135,10 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   function getPlayerYaw() {
     if (!player?.root) return 0;
+    // The boar only ever rotates around Y, so the quaternion is
+    // (0, sin(yaw/2), 0, cos(yaw/2)) and yaw falls out directly.
     const q = player.root.quaternion;
-    return Math.atan2(
-      2 * (q.x * q.z + q.w * q.y),
-      q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z
-    );
+    return 2 * Math.atan2(q.y, q.w);
   }
 
   function sendIdleState() {
@@ -149,12 +149,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   function pauseLocalPlayer() {
     if (!player?.controller) return;
-    player.controller.velocity.x = 0;
-    player.controller.velocity.z = 0;
-    if (player.controller._isMoving) {
-      player.controller._isMoving = false;
-      player.stopAnimation?.("walk");
-    }
+    player.controller.halt();
     sendIdleState();
   }
 
@@ -270,33 +265,18 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
 
   // Grenade throw via click — uses the same aim resolver as the preview
   function handleGrenadeThrowClick(clickEvent) {
-    if (!player?.root) return false;
-    // Update pointer position from the click in case mouse hasn't moved since
-    setRayFromClick(clickEvent);
-    const hit = raycaster.ray.intersectPlane(groundPlane, groundHit);
+    const hit = resolveAimTarget(clickEvent.clientX, clickEvent.clientY);
     if (!hit) return false;
-
-    const playerPos = player.root.position;
-    let targetX = hit.x;
-    let targetZ = hit.z;
-    const dx = targetX - playerPos.x;
-    const dz = targetZ - playerPos.z;
-    const distSq = dx * dx + dz * dz;
-    if (distSq > GRENADE_RANGE * GRENADE_RANGE) {
-      const scale = GRENADE_RANGE / Math.sqrt(distSq);
-      targetX = playerPos.x + dx * scale;
-      targetZ = playerPos.z + dz * scale;
-    }
 
     grenadeCooldown = GRENADE_COOLDOWN;
     actionBar.grenadeCooldownRemaining = GRENADE_COOLDOWN;
     actionBar.grenadeCooldownTotal = GRENADE_COOLDOWN;
 
-    const startPos = playerPos.clone();
+    const startPos = player.root.position.clone();
     startPos.y += 1.2;
-    const landPos = new Vector3(targetX, 0, targetZ);
+    const landPos = new Vector3(hit.x, 0, hit.z);
     grenadeManager.throwAt(startPos, landPos);
-    network.sendGrenade(targetX, targetZ);
+    network.sendGrenade(hit.x, hit.z);
 
     setGrenadeArmed(false);
     return true;
@@ -351,7 +331,8 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
     grenadeManager.update(dt);
 
     if (actionBar.grenadeArmed && player?.root) {
-      const aim = resolveAimTarget();
+      const ptr = input.getPointerPosition();
+      const aim = resolveAimTarget(ptr.x, ptr.y);
       if (aim) {
         const playerPos = player.root.position;
         grenadeAimer.update(dt, playerPos.x, playerPos.y + 1.2, playerPos.z, aim.x, aim.z);
@@ -433,7 +414,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
         const ry = getPlayerYaw();
         let anim = "idle";
         if (!player.controller.onGround) anim = "jump";
-        else if (player.controller._isMoving) anim = "walk";
+        else if (player.controller.isMoving) anim = "walk";
         network.sendState(pos.x, pos.y, pos.z, ry, anim);
       }
     }

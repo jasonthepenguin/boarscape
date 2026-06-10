@@ -1,78 +1,30 @@
 // Shared reactive state between game code and Svelte UI
 
-let _loadingText = $state(null);
-
-export const loading = {
-  get text() {
-    return _loadingText;
-  },
-  set text(v) {
-    _loadingText = v;
-  },
+const ACTION_BAR_DEFAULTS = {
+  cooldownRemaining: 0,
+  cooldownTotal: 0,
+  grenadeCooldownRemaining: 0,
+  grenadeCooldownTotal: 0,
+  grenadeArmed: false,
+  selectedSlot: null,
+  selectedNpcId: null,
 };
 
-// Action bar state
-let _cooldownRemaining = $state(0);
-let _cooldownTotal = $state(0);
-let _grenadeCooldownRemaining = $state(0);
-let _grenadeCooldownTotal = $state(0);
-let _grenadeArmed = $state(false);
-let _selectedSlot = $state(null);
-let _selectedNpcId = $state(null);
-
-export const actionBar = {
-  get cooldownRemaining() { return _cooldownRemaining; },
-  set cooldownRemaining(v) { _cooldownRemaining = v; },
-  get cooldownTotal() { return _cooldownTotal; },
-  set cooldownTotal(v) { _cooldownTotal = v; },
-  get grenadeCooldownRemaining() { return _grenadeCooldownRemaining; },
-  set grenadeCooldownRemaining(v) { _grenadeCooldownRemaining = v; },
-  get grenadeCooldownTotal() { return _grenadeCooldownTotal; },
-  set grenadeCooldownTotal(v) { _grenadeCooldownTotal = v; },
-  get grenadeArmed() { return _grenadeArmed; },
-  set grenadeArmed(v) { _grenadeArmed = v; },
-  get selectedSlot() { return _selectedSlot; },
-  set selectedSlot(v) { _selectedSlot = v; },
-  get selectedNpcId() { return _selectedNpcId; },
-  set selectedNpcId(v) { _selectedNpcId = v; },
+const PLAYER_STATS_DEFAULTS = {
+  xp: 0,
+  level: 1,
+  xpForNextLevel: 1000,
+  xpIntoCurrentLevel: 0,
 };
 
-// Player stats (XP / leveling)
-let _xp = $state(0);
-let _level = $state(1);
-let _xpForNextLevel = $state(1000);
-let _xpIntoCurrentLevel = $state(0);
-
-export const playerStats = {
-  get xp() { return _xp; },
-  set xp(v) { _xp = v; },
-  get level() { return _level; },
-  set level(v) { _level = v; },
-  get xpForNextLevel() { return _xpForNextLevel; },
-  set xpForNextLevel(v) { _xpForNextLevel = v; },
-  get xpIntoCurrentLevel() { return _xpIntoCurrentLevel; },
-  set xpIntoCurrentLevel(v) { _xpIntoCurrentLevel = v; },
-};
-
-let _gameMenuOpen = $state(false);
-
-export const gameMenu = {
-  get open() { return _gameMenuOpen; },
-  set open(v) { _gameMenuOpen = v; },
-};
+export const loading = $state({ text: null });
+export const actionBar = $state({ ...ACTION_BAR_DEFAULTS });
+export const playerStats = $state({ ...PLAYER_STATS_DEFAULTS });
+export const gameMenu = $state({ open: false });
 
 export function resetUiState() {
-  _loadingText = null;
-  _cooldownRemaining = 0;
-  _cooldownTotal = 0;
-  _grenadeCooldownRemaining = 0;
-  _grenadeCooldownTotal = 0;
-  _grenadeArmed = false;
-  _selectedSlot = null;
-  _selectedNpcId = null;
-  _xp = 0;
-  _level = 1;
-  _xpForNextLevel = 1000;
-  _xpIntoCurrentLevel = 0;
-  _gameMenuOpen = false;
+  loading.text = null;
+  Object.assign(actionBar, ACTION_BAR_DEFAULTS);
+  Object.assign(playerStats, PLAYER_STATS_DEFAULTS);
+  gameMenu.open = false;
 }

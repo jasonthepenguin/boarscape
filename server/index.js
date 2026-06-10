@@ -1,11 +1,12 @@
 import { WebSocketServer } from "ws";
 import { createNpcs, updateNpcs, serializeNpcs, hitNpc, shouldDespawn, createNpc, killNpc } from "./npcs.js";
 import {
+  ATTACK_RANGE,
   GRENADE_RANGE,
   GRENADE_FUSE,
   GRENADE_EXPLOSION_RADIUS,
+  NPC_RESPAWN_DELAY,
 } from "../src/config.js";
-import { NPC_RESPAWN_DELAY } from "../src/config.js";
 
 const PORT = 3001;
 const MAX_PLAYERS = 30;
@@ -104,6 +105,13 @@ wss.on("connection", (ws) => {
 
       const player = players.get(playerId);
       if (!player) return;
+
+      // Validate range (client clamps too). Slack accounts for latency between
+      // the client firing and the server's last known positions.
+      const adx = npc.x - player.x;
+      const adz = npc.z - player.z;
+      const maxDist = ATTACK_RANGE + 2;
+      if (adx * adx + adz * adz > maxDist * maxDist) return;
 
       const result = hitNpc(npc);
       if (!result) return;

@@ -77,6 +77,23 @@ export class ThirdPersonController {
     this._desiredFacing = new Quaternion();
   }
 
+  get isMoving() {
+    return this._isMoving;
+  }
+
+  /**
+   * Immediately stops horizontal movement (e.g. when a menu opens).
+   * Fires onMovementChange so walk animations stop too.
+   */
+  halt() {
+    this.velocity.x = 0;
+    this.velocity.z = 0;
+    if (this._isMoving) {
+      this._isMoving = false;
+      if (this.onMovementChange) this.onMovementChange(false);
+    }
+  }
+
   update(dt) {
     if (!this.target) return;
 

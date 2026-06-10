@@ -299,6 +299,7 @@ export class NpcManager {
     if (!npc) return;
     npc.dead = true;
     npc.deathTime = 0;
+    npc.deathRise = 0;
 
     if (this.selectedNpcId === id) {
       this.deselectNpc();
@@ -387,13 +388,16 @@ export class NpcManager {
           }
         }
 
-        // Scale down + rise during second half (evaporate)
+        // Scale down + rise during second half (evaporate). The rise is
+        // accumulated and applied on top of the interpolated server position,
+        // which would otherwise cancel it out every frame.
         if (progress > 0.5) {
           const scaleProgress = (progress - 0.5) * 2;
           const s = 1 - scaleProgress * 0.8;
           npc.root.scale.set(s, s, s);
-          npc.root.position.y += dt * 0.5;
+          npc.deathRise += dt * 0.5;
         }
+        npc.root.position.y += npc.deathRise;
 
         // Freeze limbs
         npc.leftLeg.rotation.x = 0;

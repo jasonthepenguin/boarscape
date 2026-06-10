@@ -15,7 +15,7 @@
       : 0
   );
   let canAttack = $derived(actionBar.cooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
-  let canGrenade = $derived(actionBar.grenadeCooldownRemaining <= 0 && actionBar.selectedNpcId !== null);
+  let canGrenade = $derived(actionBar.grenadeCooldownRemaining <= 0);
   let xpPct = $derived(
     playerStats.xpForNextLevel > 0
       ? (playerStats.xpIntoCurrentLevel / playerStats.xpForNextLevel) * 100

@@ -312,19 +312,25 @@ export function createLevelUpAura(playerRoot) {
   let elapsed = 0;
   let done = false;
 
+  function finish() {
+    if (done) return;
+    playerRoot.remove(mesh);
+    geo.dispose();
+    mat.dispose();
+    done = true;
+  }
+
   return {
     mesh,
     get done() { return done; },
+    cancel: finish,
     update(dt) {
       if (done) return;
       elapsed += dt;
 
       const progress = elapsed / LEVEL_UP_GLOW_DURATION;
       if (progress >= 1) {
-        playerRoot.remove(mesh);
-        geo.dispose();
-        mat.dispose();
-        done = true;
+        finish();
         return;
       }
 

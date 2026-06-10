@@ -20,6 +20,8 @@ export class RemotePlayerManager {
     this.players = new Map();
     this.template = null;
     this.templateAnimations = null;
+    // Ids removed before their async addPlayer finished (join/leave race)
+    this._cancelledAdds = new Set();
     this._ready = this._loadTemplate(modelUrl);
   }
 
@@ -50,7 +52,9 @@ export class RemotePlayerManager {
   }
 
   async addPlayer(id, name, color, level = 1) {
+    this._cancelledAdds.delete(id);
     await this._ready;
+    if (this._cancelledAdds.delete(id)) return;
     if (this.players.has(id)) return;
 
     const model = cloneModel(this.template);
@@ -119,7 +123,10 @@ export class RemotePlayerManager {
 
   removePlayer(id) {
     const player = this.players.get(id);
-    if (!player) return;
+    if (!player) {
+      this._cancelledAdds.add(id);
+      return;
+    }
     player.root.parent?.remove(player.root);
     player.mixer?.stopAllAction();
     this.players.delete(id);

@@ -1,12 +1,12 @@
 <script>
   import { NetworkManager } from "../game/network.js";
 
-  let { name, color, onjoin } = $props();
+  let { name, color, onjoin, onback } = $props();
 
   let status = $state("idle");
   let errorMsg = $state("");
 
-  const SERVER_URL = "ws://localhost:3001";
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || "ws://localhost:3001";
 
   async function joinServer() {
     status = "connecting";
@@ -29,7 +29,7 @@
     <div class="server-entry">
       <div class="server-info">
         <div class="server-name">BoarScape World 1</div>
-        <div class="server-status">localhost:3001</div>
+        <div class="server-status">{SERVER_URL.replace(/^wss?:\/\//, "")}</div>
       </div>
       <button
         class="join-btn"
@@ -42,7 +42,7 @@
     {#if status === "error"}
       <div class="error">{errorMsg}</div>
     {/if}
-    <button class="back-btn" onclick={() => history.back?.() || location.reload()}>
+    <button class="back-btn" onclick={onback}>
       Back
     </button>
   </div>

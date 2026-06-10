@@ -14,7 +14,7 @@ export function createEnvironment(scene, { fieldSize = FIELD_SIZE, treeCount = T
   createGround(scene, grassTexture, fieldSize);
 
   const treeDefinitions = treeSpawns.trees.slice(0, treeCount);
-  const { colliders } = createTrees(scene, fieldSize, treeDefinitions);
+  const { colliders } = createTrees(scene, treeDefinitions);
 
   return {
     boundsHalfSize: half,

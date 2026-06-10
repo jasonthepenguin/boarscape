@@ -61,6 +61,7 @@
     name={playerName}
     color={playerColor}
     onjoin={handleServerJoined}
+    onback={() => (screen = "editor")}
   />
 {/if}
 

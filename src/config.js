@@ -78,9 +78,6 @@ export const NPC_COUNT = 16;
 export const NPC_WALK_SPEED = 2.5;
 
 // =============================================================================
-// Boar color presets
-// =============================================================================
-// =============================================================================
 // Attack / Phone throw
 // =============================================================================
 export const ATTACK_COOLDOWN = 2.0;
@@ -96,7 +93,6 @@ export const NPC_DESPAWN_DELAY = 15.0;
 export const NPC_RESPAWN_DELAY = 10.0;
 export const SELECTION_RING_RADIUS = 0.5;
 export const SELECTION_RING_TUBE = 0.03;
-export const ACTION_BAR_SLOTS = 5;
 
 // =============================================================================
 // Grenade (slot 2)
