@@ -16,6 +16,31 @@ const PORT = Number(process.env.PORT) || 3001;
 const MAX_PLAYERS = 30;
 const TICK_RATE = 20;
 
+// =============================================================================
+// Join input sanitization
+// =============================================================================
+// The legit client clamps the name to 16 chars (Menu.svelte maxlength) and only
+// sends a hex color from BOAR_COLOR_PRESETS. A crafted join could otherwise send
+// a multi-KB name — which renders as a giant nametag sprite for EVERY player
+// (the nametag canvas is sized to measureText(name).width) — or a bogus color
+// string. Coerce both to the shape the real client produces.
+const MAX_NAME_LENGTH = 16;
+const DEFAULT_NAME = "Player";
+const DEFAULT_COLOR = "#ffffff";
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+function sanitizeName(raw) {
+  if (typeof raw !== "string") return DEFAULT_NAME;
+  // Strip control chars (newlines/tabs would distort the nametag canvas), trim,
+  // then clamp to the client's maxlength.
+  const cleaned = raw.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, MAX_NAME_LENGTH);
+  return cleaned || DEFAULT_NAME;
+}
+
+function sanitizeColor(raw) {
+  return typeof raw === "string" && HEX_COLOR.test(raw) ? raw : DEFAULT_COLOR;
+}
+
 // Serve the built client (dist/) from the same process so site + game server
 // share one host/port in production. In dev, Vite serves the client instead
 // and this just 404s (harmlessly) for anything but the WebSocket upgrade.
@@ -193,11 +218,14 @@ wss.on("connection", (ws, req) => {
         return;
       }
 
+      const name = sanitizeName(msg.name);
+      const color = sanitizeColor(msg.color);
+
       playerId = String(nextId++);
       players.set(playerId, {
         id: playerId,
-        name: msg.name,
-        color: msg.color,
+        name,
+        color,
         level: 1,
         x: 0,
         y: 0,
@@ -231,15 +259,15 @@ wss.on("connection", (ws, req) => {
         {
           type: "playerJoined",
           id: playerId,
-          name: msg.name,
-          color: msg.color,
+          name,
+          color,
           level: 1,
         },
         playerId,
       );
 
       console.log(
-        `Player "${msg.name}" joined (id=${playerId}). ${players.size}/${MAX_PLAYERS} online.`,
+        `Player "${name}" joined (id=${playerId}). ${players.size}/${MAX_PLAYERS} online.`,
       );
     }
 

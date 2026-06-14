@@ -60,7 +60,29 @@ fat.send(JSON.stringify({ type: "join", name: "x".repeat(8000), color: "#fff" })
 await wait(500);
 check("oversized payload closed", fat.readyState !== WebSocket.OPEN);
 
-// --- Test 5: connect-rate limit (8 per 10s window; we've used 5 already)
+// --- Test 5: join name/color sanitized (reuses open conns; no new sockets)
+// conns[0] is already joined (Test 2) and observes; conns[3] is still open and
+// unused, so it joins with a hostile name/color and we inspect what the server
+// re-broadcasts. A filtering listener is needed because conns[0] also receives
+// periodic "positions" ticks.
+function waitFor(ws, type, timeoutMs = 2000) {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => { ws.off("message", onMsg); resolve(null); }, timeoutMs);
+    function onMsg(d) {
+      const m = JSON.parse(d);
+      if (m.type === type) { clearTimeout(t); ws.off("message", onMsg); resolve(m); }
+    }
+    ws.on("message", onMsg);
+  });
+}
+
+const pjPromise = waitFor(conns[0], "playerJoined");
+conns[3].send(JSON.stringify({ type: "join", name: "Z".repeat(200), color: "not-a-color" }));
+const pj = await pjPromise;
+check("join name clamped to 16 chars", pj?.name?.length === 16);
+check("join bad color defaulted to hex", /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(pj?.color || ""));
+
+// --- Test 6: connect-rate limit (8 per 10s window; we've used 5 already)
 for (const c of conns) { try { c.close(); } catch {} }
 try { fifth.close(); } catch {}
 await wait(300);
