@@ -323,6 +323,7 @@ function startGame({ name, color, network, existingPlayers, existingNpcs }) {
       input.clearTransientInputs();
     }
 
+    env.update(dt);
     if (!gameMenu.open && player?.controller) player.controller.update(dt);
     if (player?.mixer) player.mixer.update(dt);
     remotePlayers.update(dt);
